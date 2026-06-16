@@ -196,6 +196,18 @@
     </main>
 </div>
 
+{{-- ── Image Lightbox ── --}}
+<div id="img-lightbox" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center cursor-zoom-out transition-opacity duration-300" onclick="closeLightbox()">
+    <button onclick="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10">
+        <span class="material-icons-round text-white text-xl">close</span>
+    </button>
+    <div class="absolute bottom-4 left-0 right-0 text-center z-10">
+        <p id="lightbox-place" class="text-white font-heading font-semibold text-lg drop-shadow-lg"></p>
+        <p id="lightbox-caption" class="text-white/60 text-xs mt-1"></p>
+    </div>
+    <img id="lightbox-img" src="" alt="" class="max-w-[92vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-transform duration-300" onclick="event.stopPropagation()" />
+</div>
+
 {{-- ── Loading overlay ── --}}
 <div id="loading-overlay" class="hidden fixed inset-0 bg-warm-sand/80 backdrop-blur-sm z-50 flex items-center justify-center">
     <div class="bg-white rounded-2xl p-8 shadow-lg text-center max-w-xs w-full mx-4">
@@ -342,39 +354,123 @@ function renderItinerary(data) {
     renderTips(data.tips || []);
 }
 
-// ── Wikipedia image fetcher ───────────────────────────────────
+// ── HD Image fetcher (multi-source) ──────────────────────────
 const _imgCache = {};
+const _hdImgCache = {}; // stores full-resolution URLs for lightbox
 
 async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
-    const fallbackSrc = `https://picsum.photos/seed/${encodeURIComponent(placeName)}/640/360`;
+    const fallbackSrc = `https://picsum.photos/seed/${encodeURIComponent(placeName)}/1280/720`;
     if (_imgCache[placeName] !== undefined) {
         const cached = _imgCache[placeName];
         imgEl.src = cached || fallbackSrc;
         return;
     }
-    const tryWiki = async (lang) => {
-        const wikiDomain = '{{ env('WIKIMEDIA_API_DOMAIN', 'wikipedia.org') }}';
+    const wikiDomain = '{{ env('WIKIMEDIA_API_DOMAIN', 'wikipedia.org') }}';
+
+    // Strategy 1: Wikipedia pageimages with HD resolution (2000px)
+    const tryWikiPageImage = async (lang) => {
         const q   = encodeURIComponent(placeName);
-        const url = `https://${lang}.${wikiDomain}/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=640&origin=*`;
+        const url = `https://${lang}.${wikiDomain}/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=2000&origin=*`;
         const res = await fetch(url);
         const j   = await res.json();
         const pg  = Object.values(j.query?.pages || {})[0];
         return pg?.thumbnail?.source || null;
     };
+
+    // Strategy 2: Wikimedia Commons image search for HD photos
+    const tryWikimediaCommons = async () => {
+        const q   = encodeURIComponent(placeName + ' landmark');
+        const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${q}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=2000&format=json&origin=*`;
+        try {
+            const res = await fetch(url);
+            const j   = await res.json();
+            const pages = Object.values(j.query?.pages || {});
+            // Find the first non-audio file with a thumbnail
+            for (const pg of pages) {
+                const thumbUrl = pg?.imageinfo?.[0]?.thumburl;
+                const origUrl  = pg?.imageinfo?.[0]?.url;
+                if (thumbUrl) {
+                    return { thumb: thumbUrl, original: origUrl };
+                }
+            }
+        } catch { /* ignore */ }
+        return null;
+    };
+
     try {
-        const src = (await tryWiki('en')) || (await tryWiki('id'));
-        _imgCache[placeName] = src || null;
-        imgEl.src = src || fallbackSrc;
+        // Try Wikipedia pageimages first (most relevant)
+        const wikiSrc = (await tryWikiPageImage('id')) || (await tryWikiPageImage('en'));
+
+        if (wikiSrc) {
+            _imgCache[placeName] = wikiSrc;
+            // Store original URL for lightbox (strip /thumb/ to get full-res)
+            const fullUrl = wikiSrc.replace(/\/thumb\//, '/').replace(/\/\d+px-[^/]+$/, '');
+            _hdImgCache[placeName] = fullUrl;
+            imgEl.src = wikiSrc;
+            return;
+        }
+
+        // Fallback: Wikimedia Commons search
+        const commonsResult = await tryWikimediaCommons();
+        if (commonsResult) {
+            _imgCache[placeName] = commonsResult.thumb;
+            _hdImgCache[placeName] = commonsResult.original || commonsResult.thumb;
+            imgEl.src = commonsResult.thumb;
+            return;
+        }
+
+        // Last resort: picsum placeholder at HD resolution
+        _imgCache[placeName] = fallbackSrc;
+        imgEl.src = fallbackSrc;
     } catch {
         _imgCache[placeName] = null;
         imgEl.src = fallbackSrc;
     }
 }
 
+// ── Lightbox ─────────────────────────────────────────────────
+function openLightbox(placeName) {
+    const lb = document.getElementById('img-lightbox');
+    const img = document.getElementById('lightbox-img');
+    const place = document.getElementById('lightbox-place');
+    const caption = document.getElementById('lightbox-caption');
+
+    place.textContent = placeName;
+
+    // Use HD cache if available, otherwise use the current image src
+    const hdSrc = _hdImgCache[placeName];
+    const imgEl = document.querySelector(`img[alt="${CSS.escape(placeName)}"]`);
+
+    if (hdSrc) {
+        img.src = hdSrc;
+        caption.textContent = 'Sumber: Wikimedia Commons';
+    } else if (imgEl) {
+        img.src = imgEl.src;
+        caption.textContent = '';
+    }
+
+    lb.classList.remove('hidden');
+    lb.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    const lb = document.getElementById('img-lightbox');
+    lb.classList.add('hidden');
+    lb.classList.remove('flex');
+    document.body.style.overflow = '';
+}
+
+// Close lightbox on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+});
+
 function buildDayCard(day, dayNum) {
     const activities = (day.activities || []).map((act, idx) => {
         const isLast = idx === (day.activities.length - 1);
         const actId  = `act-img-${dayNum}-${idx}`;
+        const escapedPlace = (act.place || '').replace(/'/g, "\\'");
 
         return `
         <div class="py-3 ${isLast ? '' : 'border-b border-stone-100'}">
@@ -392,17 +488,23 @@ function buildDayCard(day, dayNum) {
                         ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0">${act.ticket}</span>` : ''}
                     </div>
                     ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
-                    <div id="${actId}-wrapper" class="ml-6 rounded-xl overflow-hidden border border-stone-100 bg-stone-50 relative" style="height:148px;">
+                    <div id="${actId}-wrapper" class="ml-6 rounded-xl overflow-hidden border border-stone-100 bg-stone-50 relative cursor-pointer group" style="height:220px;" onclick="openLightbox('${escapedPlace}')">
                         <img id="${actId}" alt="${act.place}"
-                             class="w-full h-full object-cover transition-opacity duration-500 opacity-0" />
+                             class="w-full h-full object-cover transition-all duration-500 opacity-0 group-hover:scale-105" loading="lazy" />
                         <div id="${actId}-sk" class="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-                            <div class="w-8 h-8 bg-stone-200 rounded-xl animate-pulse flex items-center justify-center">
-                                <span class="material-icons-round text-stone-300 text-base">image</span>
+                            <div class="w-9 h-9 bg-stone-200 rounded-xl animate-pulse flex items-center justify-center">
+                                <span class="material-icons-round text-stone-300 text-lg">photo_camera</span>
                             </div>
-                            <p class="text-xs text-stone-300">Memuat foto…</p>
+                            <p class="text-xs text-stone-300">Memuat foto HD…</p>
                         </div>
-                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/55 to-transparent px-3 py-2 pointer-events-none">
-                            <p class="text-white text-xs font-medium truncate">${act.place}</p>
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
+                            <p class="text-white text-sm font-medium truncate drop-shadow">${act.place}</p>
+                        </div>
+                        <div class="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                            <span class="text-white text-xs flex items-center gap-1">
+                                <span class="material-icons-round text-xs">zoom_in</span>
+                                HD
+                            </span>
                         </div>
                     </div>
                 </div>
