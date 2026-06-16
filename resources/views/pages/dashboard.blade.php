@@ -1,0 +1,531 @@
+<x-layouts.app>
+<div class="flex flex-col h-screen overflow-hidden">
+
+    {{-- ========== TOP NAV ========== --}}
+    <nav class="flex-shrink-0 bg-white border-b border-stone-100 px-4 py-2.5 flex items-center justify-between z-10">
+        <a href="{{ route('landing') }}" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <span class="material-icons-round text-terracotta">travel_explore</span>
+            <span class="font-heading font-bold text-lg text-stone-800">Nusantara<span class="text-terracotta">AI</span></span>
+        </a>
+
+        {{-- Trip summary pill --}}
+        <div id="trip-summary-pill" class="hidden items-center gap-3 bg-stone-50 border border-stone-200 rounded-full px-4 py-1.5 text-sm">
+            <span class="flex items-center gap-1 text-stone-600">
+                <span class="material-icons-round text-base text-terracotta">location_on</span>
+                <span id="pill-destination">—</span>
+            </span>
+            <span class="text-stone-300">|</span>
+            <span class="flex items-center gap-1 text-stone-600">
+                <span class="material-icons-round text-base text-terracotta">schedule</span>
+                <span id="pill-duration">—</span>
+            </span>
+            <span class="text-stone-300">|</span>
+            <span class="flex items-center gap-1 text-stone-600">
+                <span class="material-icons-round text-base text-emerald">payments</span>
+                <span id="pill-budget">—</span>
+            </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btn-export"
+                    onclick="exportItinerary()"
+                    class="hidden items-center gap-1 border border-stone-200 text-stone-600 text-sm px-3 py-1.5 rounded-lg hover:border-terracotta hover:text-terracotta transition-all">
+                <span class="material-icons-round text-base">download</span>
+                Ekspor PDF
+            </button>
+            <button onclick="resetChat()"
+                    class="flex items-center gap-1 text-stone-400 text-sm px-3 py-1.5 rounded-lg hover:text-stone-700 hover:bg-stone-50 transition-all">
+                <span class="material-icons-round text-base">refresh</span>
+                Mulai Ulang
+            </button>
+        </div>
+    </nav>
+
+    {{-- ========== TWO-COLUMN MAIN ========== --}}
+    <main class="flex-1 flex overflow-hidden">
+
+        {{-- ── LEFT COLUMN: Chatbot ──────────────────────────────────── --}}
+        <aside class="w-full md:w-[420px] flex-shrink-0 flex flex-col border-r border-stone-100 bg-white">
+
+            {{-- Column header --}}
+            <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100">
+                <div class="w-7 h-7 bg-terracotta rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-white text-sm">smart_toy</span>
+                </div>
+                <span class="font-heading font-semibold text-stone-700 text-sm">Asisten AI</span>
+                <span id="ai-status" class="ml-auto flex items-center gap-1 text-xs text-emerald">
+                    <span class="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse"></span>
+                    Online
+                </span>
+            </div>
+
+            {{-- Messages --}}
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-5 space-y-4 scroll-smooth">
+                {{-- Initial AI greeting --}}
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
+                        <span class="material-icons-round text-white text-base">smart_toy</span>
+                    </div>
+                    <div class="bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[280px]">
+                        <p class="text-sm text-stone-700 leading-relaxed">
+                            Halo! Saya siap merencanakan wisata impianmu 🌴<br><br>
+                            Ceritakan tujuanmu — misalnya: <em>"Mau ke Lombok 5 hari dengan budget Rp 4 juta, suka wisata alam dan pantai"</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── Chat Input ── --}}
+            <div class="p-4 border-t border-stone-100 bg-white">
+                <form id="chat-form" class="flex items-end gap-2">
+                    <div class="flex-1 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-2.5 focus-within:border-terracotta focus-within:ring-2 focus-within:ring-terracotta/10 transition-all">
+                        <textarea
+                            id="chat-input"
+                            rows="1"
+                            placeholder="Ketik pesan atau pertanyaan..."
+                            class="w-full bg-transparent text-sm text-stone-700 placeholder-stone-400 outline-none resize-none leading-relaxed max-h-32"
+                            style="overflow-y: hidden;"
+                        ></textarea>
+                    </div>
+                    <button type="submit"
+                            id="send-btn"
+                            class="w-10 h-10 bg-terracotta rounded-xl flex items-center justify-center hover:bg-terracotta-dark transition-colors flex-shrink-0 disabled:opacity-50">
+                        <span class="material-icons-round text-white">send</span>
+                    </button>
+                </form>
+                <p class="text-center text-xs text-stone-300 mt-2">Didukung Google Gemini AI</p>
+            </div>
+        </aside>
+
+        {{-- ── RIGHT COLUMN: Itinerary Results ─────────────────────── --}}
+        <section id="right-panel" class="hidden md:flex flex-col flex-1 bg-warm-sand overflow-hidden">
+
+            {{-- Empty state (shown before itinerary loads) --}}
+            <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div class="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-5 border border-stone-100">
+                    <span class="material-icons-round text-terracotta text-4xl">explore</span>
+                </div>
+                <h3 class="font-heading font-semibold text-stone-700 text-xl mb-2">Itinerary Akan Tampil di Sini</h3>
+                <p class="text-stone-400 text-sm max-w-xs leading-relaxed">
+                    Mulai chat dengan AI di sebelah kiri untuk mendapatkan rencana perjalanan personalmu.
+                </p>
+                <div class="mt-8 grid grid-cols-3 gap-3 w-full max-w-sm">
+                    @foreach(['Wisata Alam', 'Budaya & Sejarah', 'Kuliner', 'Pantai & Laut', 'Kota', 'Petualangan'] as $cat)
+                    <div class="bg-white rounded-xl p-3 text-center border border-stone-100">
+                        <span class="text-xs text-stone-500">{{ $cat }}</span>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Itinerary content (hidden until generated) --}}
+            <div id="itinerary-content" class="hidden flex-1 overflow-y-auto">
+
+                {{-- Destination Header --}}
+                <div id="destination-header" class="relative bg-terracotta px-6 pt-8 pb-6 overflow-hidden">
+                    <div class="absolute inset-0 opacity-10">
+                        <div class="absolute top-0 right-0 w-48 h-48 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                        <div class="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                    </div>
+                    <div class="relative">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <p class="text-terracotta-light text-xs font-semibold uppercase tracking-widest mb-1">Destinasi Wisata</p>
+                                <h2 id="dest-name" class="font-heading font-bold text-white text-3xl"></h2>
+                                <p id="dest-province" class="text-white/70 text-sm mt-1"></p>
+                            </div>
+                            <span class="material-icons-round text-white/30 text-6xl">travel_explore</span>
+                        </div>
+                        {{-- Stats row --}}
+                        <div class="flex gap-4 mt-4">
+                            <div class="bg-white/15 rounded-xl px-4 py-2.5 text-center flex-1">
+                                <p class="text-white/70 text-xs mb-1">Durasi</p>
+                                <p id="stat-duration" class="text-white font-heading font-bold text-lg"></p>
+                            </div>
+                            <div class="bg-white/15 rounded-xl px-4 py-2.5 text-center flex-1">
+                                <p class="text-white/70 text-xs mb-1">Est. Budget</p>
+                                <p id="stat-budget" class="text-white font-heading font-bold text-lg"></p>
+                            </div>
+                            <div class="bg-white/15 rounded-xl px-4 py-2.5 text-center flex-1">
+                                <p class="text-white/70 text-xs mb-1">Lokasi</p>
+                                <p id="stat-places" class="text-white font-heading font-bold text-lg"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Tabs: Itinerary / Budget / Tips --}}
+                <div class="bg-white border-b border-stone-100 px-4">
+                    <div class="flex gap-0">
+                        @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips'] as $tab => $label)
+                        <button onclick="switchTab('{{ $tab }}')"
+                                data-tab="{{ $tab }}"
+                                class="tab-btn flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all
+                                       {{ $tab === 'itinerary' ? 'border-terracotta text-terracotta' : 'border-transparent text-stone-400 hover:text-stone-600' }}">
+                            <span class="material-icons-round text-base">
+                                {{ $tab === 'itinerary' ? 'calendar_today' : ($tab === 'budget' ? 'payments' : 'lightbulb') }}
+                            </span>
+                            {{ $label }}
+                        </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Tab: Itinerary --}}
+                <div id="tab-itinerary" class="p-5 space-y-4">
+                    {{-- Day cards injected by JS --}}
+                </div>
+
+                {{-- Tab: Budget --}}
+                <div id="tab-budget" class="hidden p-5">
+                    <div id="budget-content" class="space-y-3">
+                        {{-- Budget items injected by JS --}}
+                    </div>
+                </div>
+
+                {{-- Tab: Tips --}}
+                <div id="tab-tips" class="hidden p-5">
+                    <div id="tips-content" class="space-y-3">
+                        {{-- Tips injected by JS --}}
+                    </div>
+                </div>
+
+            </div> {{-- /itinerary-content --}}
+        </section>
+
+    </main>
+</div>
+
+{{-- ── Loading overlay ── --}}
+<div id="loading-overlay" class="hidden fixed inset-0 bg-warm-sand/80 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 shadow-lg text-center max-w-xs w-full mx-4">
+        <div class="w-16 h-16 bg-terracotta/10 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <span class="material-icons-round text-terracotta text-3xl">travel_explore</span>
+        </div>
+        <p class="font-heading font-semibold text-stone-700 mb-1">Menyusun Itinerary...</p>
+        <p class="text-xs text-stone-400" id="loading-tip">AI sedang menganalisis destinasimu</p>
+    </div>
+</div>
+
+<script>
+// ============================================================
+//  NusantaraAI Dashboard — JavaScript
+// ============================================================
+
+const GEMINI_API_URL = '/api/gemini'; // proxied through Laravel
+let conversationHistory = [];
+let currentItinerary = null;
+
+// ── DOM refs ─────────────────────────────────────────────────
+const chatMessages   = document.getElementById('chat-messages');
+const chatForm       = document.getElementById('chat-form');
+const chatInput      = document.getElementById('chat-input');
+const loadingOverlay = document.getElementById('loading-overlay');
+const emptyState     = document.getElementById('empty-state');
+const itineraryContent = document.getElementById('itinerary-content');
+const btnExport      = document.getElementById('btn-export');
+const tripPill       = document.getElementById('trip-summary-pill');
+
+// ── Auto-resize textarea ──────────────────────────────────────
+chatInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+});
+
+// Enter to send (Shift+Enter = new line)
+chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
+    }
+});
+
+// ── Chat form submit ──────────────────────────────────────────
+chatForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    appendUserMessage(message);
+    conversationHistory.push({ role: 'user', parts: [{ text: message }] });
+
+    appendTypingIndicator();
+
+    try {
+        const response = await sendToGemini(conversationHistory);
+        removeTypingIndicator();
+
+        if (response.itinerary) {
+            renderItinerary(response.itinerary);
+            appendAIMessage(response.message || `Itinerary untuk <strong>${response.itinerary.destination}</strong> sudah siap! Cek panel kanan ya. Ada yang ingin diubah?`);
+            conversationHistory.push({ role: 'model', parts: [{ text: response.message || '' }] });
+        } else {
+            appendAIMessage(response.message);
+            conversationHistory.push({ role: 'model', parts: [{ text: response.message }] });
+        }
+    } catch (err) {
+        removeTypingIndicator();
+        appendAIMessage('Maaf, terjadi gangguan koneksi. Silakan coba lagi sebentar.');
+        console.error(err);
+    }
+});
+
+// ── API call to Laravel backend ───────────────────────────────
+async function sendToGemini(history) {
+    const res = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: JSON.stringify({ history }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+
+// ── Render itinerary to right panel ──────────────────────────
+function renderItinerary(data) {
+    currentItinerary = data;
+
+    // Show itinerary panel, hide empty state
+    emptyState.classList.add('hidden');
+    itineraryContent.classList.remove('hidden');
+    itineraryContent.classList.add('flex', 'flex-col');
+    btnExport.classList.remove('hidden');
+    btnExport.classList.add('flex');
+    tripPill.classList.remove('hidden');
+    tripPill.classList.add('flex');
+
+    // Update header
+    document.getElementById('dest-name').textContent      = data.destination;
+    document.getElementById('dest-province').textContent  = data.province || '';
+    document.getElementById('stat-duration').textContent  = `${data.days} Hari`;
+    document.getElementById('stat-budget').textContent    = data.total_budget || '—';
+    document.getElementById('stat-places').textContent    = `${data.total_places || '—'} Lokasi`;
+
+    // Update pill
+    document.getElementById('pill-destination').textContent = data.destination;
+    document.getElementById('pill-duration').textContent    = `${data.days} Hari`;
+    document.getElementById('pill-budget').textContent      = data.total_budget || '';
+
+    // Render day cards
+    const itineraryTab = document.getElementById('tab-itinerary');
+    itineraryTab.innerHTML = '';
+    (data.schedule || []).forEach((day, i) => {
+        itineraryTab.innerHTML += buildDayCard(day, i + 1);
+    });
+
+    // Render budget
+    renderBudget(data.budget || []);
+
+    // Render tips
+    renderTips(data.tips || []);
+}
+
+function buildDayCard(day, dayNum) {
+    const activities = (day.activities || []).map(act => `
+        <div class="flex gap-3 py-3 border-b border-stone-100 last:border-0 last:pb-0">
+            <div class="text-center w-14 flex-shrink-0">
+                <p class="text-xs font-semibold text-terracotta">${act.time || ''}</p>
+                <span class="inline-block w-0.5 h-5 bg-stone-200 mx-auto mt-1"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="material-icons-round text-stone-400 text-base">${getActivityIcon(act.category)}</span>
+                        <p class="text-sm font-semibold text-stone-800">${act.place}</p>
+                    </div>
+                    ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0">${act.ticket}</span>` : ''}
+                </div>
+                ${act.description ? `<p class="text-xs text-stone-400 mt-1 ml-6">${act.description}</p>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    return `
+        <div class="bg-white rounded-2xl border border-stone-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-3 bg-stone-50 border-b border-stone-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-terracotta rounded-lg flex items-center justify-center">
+                        <span class="text-white text-xs font-bold font-heading">${dayNum}</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold font-heading text-stone-700">Hari ${dayNum}</p>
+                        ${day.title ? `<p class="text-xs text-stone-400">${day.title}</p>` : ''}
+                    </div>
+                </div>
+                <span class="text-xs text-stone-400">${day.activities?.length || 0} aktivitas</span>
+            </div>
+            <div class="px-5">${activities}</div>
+        </div>
+    `;
+}
+
+function getActivityIcon(category) {
+    const icons = {
+        'alam': 'landscape', 'pantai': 'beach_access', 'museum': 'museum',
+        'kuliner': 'restaurant', 'hotel': 'hotel', 'belanja': 'shopping_bag',
+        'transport': 'directions_car', 'budaya': 'temple_hindu', 'default': 'place'
+    };
+    return icons[category?.toLowerCase()] || icons.default;
+}
+
+function renderBudget(items) {
+    const container = document.getElementById('budget-content');
+    if (!items.length) {
+        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Data budget akan tersedia setelah itinerary dibuat.</p>';
+        return;
+    }
+    const total = items.reduce((sum, i) => sum + (i.amount || 0), 0);
+    container.innerHTML = `
+        <div class="bg-terracotta text-white rounded-2xl p-5 mb-4">
+            <p class="text-terracotta-light text-xs mb-1">Total Estimasi Budget</p>
+            <p class="font-heading font-bold text-3xl">Rp ${total.toLocaleString('id-ID')}</p>
+        </div>
+        ${items.map(item => `
+            <div class="bg-white rounded-xl px-5 py-4 border border-stone-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-stone-50 rounded-lg flex items-center justify-center">
+                        <span class="material-icons-round text-stone-400 text-base">${getBudgetIcon(item.category)}</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-stone-700">${item.label}</p>
+                        ${item.note ? `<p class="text-xs text-stone-400">${item.note}</p>` : ''}
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-semibold text-stone-800">Rp ${(item.amount || 0).toLocaleString('id-ID')}</p>
+                    <p class="text-xs text-stone-400">${item.per || ''}</p>
+                </div>
+            </div>
+        `).join('')}
+    `;
+}
+
+function getBudgetIcon(cat) {
+    const m = { akomodasi: 'hotel', makan: 'restaurant', transport: 'directions_car', tiket: 'confirmation_number', lainnya: 'more_horiz' };
+    return m[cat?.toLowerCase()] || 'payments';
+}
+
+function renderTips(tips) {
+    const container = document.getElementById('tips-content');
+    if (!tips.length) {
+        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Tips akan tersedia setelah itinerary dibuat.</p>';
+        return;
+    }
+    container.innerHTML = tips.map((tip, i) => `
+        <div class="bg-white rounded-xl px-5 py-4 border border-stone-100 flex items-start gap-3">
+            <div class="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="material-icons-round text-amber-500 text-base">lightbulb</span>
+            </div>
+            <div>
+                ${tip.title ? `<p class="text-sm font-semibold text-stone-700 mb-1">${tip.title}</p>` : ''}
+                <p class="text-sm text-stone-500 leading-relaxed">${tip.content || tip}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(name) {
+    ['itinerary', 'budget', 'tips'].forEach(tab => {
+        const el = document.getElementById(`tab-${tab}`);
+        const btn = document.querySelector(`[data-tab="${tab}"]`);
+        if (tab === name) {
+            el.classList.remove('hidden');
+            btn.classList.add('border-terracotta', 'text-terracotta');
+            btn.classList.remove('border-transparent', 'text-stone-400');
+        } else {
+            el.classList.add('hidden');
+            btn.classList.remove('border-terracotta', 'text-terracotta');
+            btn.classList.add('border-transparent', 'text-stone-400');
+        }
+    });
+}
+
+// ── Message helpers ───────────────────────────────────────────
+function appendUserMessage(text) {
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-3 justify-end';
+    div.innerHTML = `
+        <div class="bg-terracotta text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[260px]">
+            <p class="text-sm leading-relaxed">${escapeHtml(text)}</p>
+        </div>
+        <div class="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="material-icons-round text-stone-500 text-base">person</span>
+        </div>`;
+    chatMessages.appendChild(div);
+    scrollToBottom();
+}
+
+function appendAIMessage(html) {
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-3';
+    div.innerHTML = `
+        <div class="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="material-icons-round text-white text-base">smart_toy</span>
+        </div>
+        <div class="bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[280px]">
+            <p class="text-sm text-stone-700 leading-relaxed">${html}</p>
+        </div>`;
+    chatMessages.appendChild(div);
+    scrollToBottom();
+}
+
+function appendTypingIndicator() {
+    const div = document.createElement('div');
+    div.id = 'typing-indicator';
+    div.className = 'flex items-start gap-3';
+    div.innerHTML = `
+        <div class="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="material-icons-round text-white text-base">smart_toy</span>
+        </div>
+        <div class="bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3">
+            <div class="flex gap-1 items-center h-5">
+                <span class="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style="animation-delay:0ms"></span>
+                <span class="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style="animation-delay:150ms"></span>
+                <span class="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style="animation-delay:300ms"></span>
+            </div>
+        </div>`;
+    chatMessages.appendChild(div);
+    scrollToBottom();
+}
+
+function removeTypingIndicator() {
+    document.getElementById('typing-indicator')?.remove();
+}
+
+function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function resetChat() {
+    if (!confirm('Mulai percakapan baru? Itinerary saat ini akan dihapus.')) return;
+    window.location.href = '{{ route("dashboard") }}';
+}
+
+function exportItinerary() {
+    alert('Fitur ekspor PDF akan segera hadir!');
+}
+
+// ── Auto-load from URL query ──────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (q) {
+        setTimeout(() => {
+            chatInput.value = q;
+            chatForm.dispatchEvent(new Event('submit'));
+        }, 600);
+    }
+});
+</script>
+</x-layouts.app>

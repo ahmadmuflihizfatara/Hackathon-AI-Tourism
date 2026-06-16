@@ -1,9 +1,148 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/* ================================================================
+   NusantaraAI — Custom CSS
+   Primary: Terracotta (#C1602B)
+   Background: Warm Sand (#F5EFE6)
+   Accent: Emerald Green (#3A7D5C)
+   Heading: Poppins | Body: Open Sans
+================================================================ */
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+@layer base {
+    :root {
+        --terracotta:      #C1602B;
+        --terracotta-dark: #9C4A1F;
+        --terracotta-light:#F4C9B0;
+        --warm-sand:       #F5EFE6;
+        --emerald:         #3A7D5C;
+        --emerald-dark:    #265C42;
+        --emerald-light:   #B8DBCA;
+        --amber:           #D4872E;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: 'Open Sans', sans-serif;
+        background-color: var(--warm-sand);
+        color: #292524; /* stone-800 */
+    }
+
+    h1, h2, h3, h4, h5 {
+        font-family: 'Poppins', sans-serif;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+        width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: #d6d3d1; /* stone-300 */
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: #a8a29e; /* stone-400 */
+    }
 }
+
+@layer components {
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn-primary {
+        @apply bg-terracotta text-white font-medium px-5 py-2.5 rounded-full
+               hover:bg-terracotta-dark transition-all duration-200
+               flex items-center gap-2 text-sm shadow-warm;
+    }
+
+    .btn-secondary {
+        @apply border border-terracotta/30 text-terracotta font-medium px-5 py-2.5
+               rounded-full hover:bg-terracotta/5 transition-all duration-200
+               flex items-center gap-2 text-sm;
+    }
+
+    .btn-ghost {
+        @apply text-stone-500 font-medium px-4 py-2 rounded-xl
+               hover:bg-stone-100 hover:text-stone-700 transition-all duration-200
+               flex items-center gap-2 text-sm;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card {
+        @apply bg-white rounded-2xl border border-stone-100 shadow-sm;
+    }
+
+    .card-hover {
+        @apply bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md hover:border-stone-200 transition-all duration-200;
+    }
+
+    /* ── Input ───────────────────────────────────────────────── */
+    .input-base {
+        @apply w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5
+               text-sm text-stone-700 placeholder-stone-400
+               focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta
+               transition-all duration-200;
+    }
+
+    /* ── Badge ───────────────────────────────────────────────── */
+    .badge {
+        @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full;
+    }
+
+    .badge-terracotta {
+        @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-terracotta/10 text-terracotta;
+    }
+
+    .badge-emerald {
+        @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald/10 text-emerald-dark;
+    }
+
+    .badge-amber {
+        @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber/10 text-amber-dark;
+    }
+
+    /* ── Section headings ────────────────────────────────────── */
+    .section-eyebrow {
+        @apply text-terracotta text-xs font-semibold tracking-widest uppercase;
+    }
+
+    .section-title {
+        @apply font-heading font-bold text-3xl md:text-4xl text-stone-800;
+    }
+
+    /* ── Chat bubble ─────────────────────────────────────────── */
+    .bubble-ai {
+        @apply bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3
+               text-sm text-stone-700 leading-relaxed max-w-[280px];
+    }
+
+    .bubble-user {
+        @apply bg-terracotta text-white rounded-2xl rounded-tr-sm px-4 py-3
+               text-sm leading-relaxed max-w-[260px];
+    }
+
+    /* ── Itinerary day card ───────────────────────────────────── */
+    .day-card {
+        @apply bg-white rounded-2xl border border-stone-100 overflow-hidden
+               hover:border-terracotta/20 transition-all duration-200;
+    }
+
+    /* ── Tab button ──────────────────────────────────────────── */
+    .tab-active {
+        @apply border-b-2 border-terracotta text-terracotta;
+    }
+
+    /* ── Gradient text ───────────────────────────────────────── */
+    .text-gradient {
+        background: linear-gradient(135deg, var(--terracotta) 0%, #E07844 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+}
+
+
