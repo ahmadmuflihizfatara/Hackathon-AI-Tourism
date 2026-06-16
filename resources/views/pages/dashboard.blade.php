@@ -1,4 +1,8 @@
 <x-layouts.app>
+{{-- Leaflet Maps CSS --}}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 <div class="flex flex-col h-screen overflow-hidden">
 
     {{-- ========== TOP NAV ========== --}}
@@ -154,16 +158,16 @@
                     </div>
                 </div>
 
-                {{-- Tabs: Itinerary / Budget / Tips --}}
+                {{-- Tabs: Itinerary / Budget / Tips / Rute --}}
                 <div class="bg-white border-b border-stone-100 px-4">
                     <div class="flex gap-0">
-                        @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips'] as $tab => $label)
+                        @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips', 'rute' => 'Rute'] as $tab => $label)
                         <button onclick="switchTab('{{ $tab }}')"
                                 data-tab="{{ $tab }}"
                                 class="tab-btn flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all
                                        {{ $tab === 'itinerary' ? 'border-terracotta text-terracotta' : 'border-transparent text-stone-400 hover:text-stone-600' }}">
                             <span class="material-icons-round text-base">
-                                {{ $tab === 'itinerary' ? 'calendar_today' : ($tab === 'budget' ? 'payments' : 'lightbulb') }}
+                                {{ $tab === 'itinerary' ? 'calendar_today' : ($tab === 'budget' ? 'payments' : ($tab === 'tips' ? 'lightbulb' : 'route')) }}
                             </span>
                             {{ $label }}
                         </button>
@@ -188,6 +192,12 @@
                     <div id="tips-content" class="space-y-3">
                         {{-- Tips injected by JS --}}
                     </div>
+                </div>
+
+                {{-- Tab: Rute ← TAMBAHKAN BLOK INI --}}
+                <div id="tab-rute" class="hidden p-5 space-y-4">
+                    <div id="map-route" class="w-full h-[360px] rounded-2xl border border-stone-100"></div>
+                <div id="route-summary" class="space-y-3"></div>
                 </div>
 
             </div> {{-- /itinerary-content --}}
@@ -352,6 +362,9 @@ function renderItinerary(data) {
 
     // Render tips
     renderTips(data.tips || []);
+
+    //Render route
+    renderMap(data);
 }
 
 // ── HD Image fetcher (multi-source) ──────────────────────────
@@ -365,7 +378,7 @@ async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
         imgEl.src = cached || fallbackSrc;
         return;
     }
-    const wikiDomain = '{{ env('WIKIMEDIA_API_DOMAIN', 'wikipedia.org') }}';
+    const wikiDomain = '{{ env("WIKIMEDIA_API_DOMAIN", "wikipedia.org") }}';
 
     // Strategy 1: Wikipedia pageimages with HD resolution (2000px)
     const tryWikiPageImage = async (lang) => {
@@ -596,9 +609,98 @@ function renderTips(tips) {
     `).join('');
 }
 
+function renderMap(data) {
+    const mapRoute = document.getElementById('map-route');
+    const routeSummary = document.getElementById('route-summary');
+    if (!mapRoute || !routeSummary) return;
+
+    const places = (data.schedule || []).flatMap(day => (day.activities || []).map(act => act.place || '')).filter(Boolean);
+
+    // Initialize Leaflet map centered on Indonesia (default)
+    setTimeout(() => {
+        // Remove existing map if any
+        if (window.routeMap) {
+            window.routeMap.remove();
+        }
+
+        const mapElement = document.getElementById('map-route');
+        if (!mapElement) return;
+
+        // Create map centered on Indonesia
+        window.routeMap = L.map('map-route').setView([-2.5489, 113.9213], 5);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(window.routeMap);
+
+        // Sample coordinates for major Indonesian cities (simplified)
+        const cityCoords = {
+            'Bali': [-8.6705, 115.2126],
+            'Lombok': [-8.6500, 116.3164],
+            'Jakarta': [-6.2088, 106.8456],
+            'Bandung': [-6.9175, 107.6062],
+            'Yogyakarta': [-7.7956, 110.3695],
+            'Surabaya': [-7.2575, 112.7521],
+            'Medan': [3.1952, 98.6722],
+            'Seminyak': [-8.6906, 115.1694],
+            'Ubud': [-8.5069, 115.2625],
+            'Denpasar': [-8.6726, 115.2126],
+            'Tanah Lot': [-8.6274, 115.1640],
+            'Pantai Seminyak': [-8.6906, 115.1694],
+            'Pantai Kuta': [-8.7245, 115.1720],
+        };
+
+        // Get coordinates for places (fallback to Indonesia center if not found)
+        const markers = [];
+        places.forEach((place, idx) => {
+            // Try to find matching city/location
+            let coords = null;
+            for (const [city, coord] of Object.entries(cityCoords)) {
+                if (place.toLowerCase().includes(city.toLowerCase())) {
+                    coords = coord;
+                    break;
+                }
+            }
+
+            if (coords) {
+                const marker = L.marker(coords, {
+                    opacity: 0.8
+                }).addTo(window.routeMap)
+                    .bindPopup(`<strong>${idx + 1}. ${place}</strong>`)
+                    .openPopup();
+                markers.push(marker);
+            }
+        });
+
+        // Fit map to show all markers
+        if (markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            window.routeMap.fitBounds(group.getBounds().pad(0.1));
+        }
+
+        // Add polyline connecting markers
+        if (markers.length > 1) {
+            const latlngs = markers.map(m => m.getLatLng());
+            L.polyline(latlngs, {color: '#c2410c', weight: 2, opacity: 0.7}).addTo(window.routeMap);
+        }
+    }, 100);
+
+    // Render route summary list
+    routeSummary.innerHTML = `
+        <div class="bg-white/90 rounded-2xl border border-stone-100 p-4">
+            <p class="text-sm font-semibold text-stone-700 mb-3">Rute Perjalanan</p>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-stone-600">
+                ${places.map((place, idx) => `<li><span class="font-medium">${escapeHtml(place)}</span></li>`).join('')}
+            </ol>
+        </div>
+    `;
+}
+
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(name) {
-    ['itinerary', 'budget', 'tips'].forEach(tab => {
+    ['itinerary', 'budget', 'tips', 'rute'].forEach(tab => {
         const el = document.getElementById(`tab-${tab}`);
         const btn = document.querySelector(`[data-tab="${tab}"]`);
         if (tab === name) {

@@ -50,22 +50,41 @@ class GeminiService
         ];
 
         try {
-            $response = Http::timeout(30)
-                ->withoutVerifying()
-                ->withQueryParameters(['key' => $this->apiKey])
-                ->post($this->apiUrl, $payload);
+          // Prevent PHP process from timing out too quickly for longer API calls.
+          if (function_exists('set_time_limit')) {
+            @set_time_limit(60);
+          }
 
-            if ($response->failed()) {
-                Log::error('Gemini API error', ['status' => $response->status(), 'body' => $response->body()]);
-                return ['message' => 'Maaf, terjadi kesalahan saat menghubungi AI. Silakan coba lagi.'];
-            }
+          // Use a reasonable timeout and a short connect timeout to fail fast on network issues.
+          $response = Http::timeout(20)
+            ->withOptions(['connect_timeout' => 5])
+            ->withoutVerifying()
+            ->withQueryParameters(['key' => $this->apiKey])
+            ->post($this->apiUrl, $payload);
 
-            $text = $response->json('candidates.0.content.parts.0.text', '');
-            return $this->parseResponse($text);
+          $status = $response->status();
+
+          if ($status === 429) {
+            Log::warning('Gemini rate limited', ['status' => $status, 'body' => $response->body()]);
+            return ['message' => 'Layanan AI sedang mencapai batas kuota. Silakan coba lagi nanti.'];
+          }
+
+          if ($status === 503) {
+            Log::warning('Gemini unavailable', ['status' => $status, 'body' => $response->body()]);
+            return ['message' => 'Layanan AI sedang sibuk. Silakan coba lagi sebentar.'];
+          }
+
+          if ($response->failed()) {
+            Log::error('Gemini API error', ['status' => $status, 'body' => $response->body()]);
+            return ['message' => 'Maaf, terjadi kesalahan saat menghubungi AI. Silakan coba lagi.'];
+          }
+
+          $text = $response->json('candidates.0.content.parts.0.text', '');
+          return $this->parseResponse($text);
 
         } catch (\Exception $e) {
-            Log::error('Gemini exception', ['error' => $e->getMessage()]);
-            return ['message' => 'Terjadi gangguan koneksi. Silakan coba lagi dalam beberapa saat.'];
+          Log::error('Gemini exception', ['error' => $e->getMessage()]);
+          return ['message' => 'Terjadi gangguan koneksi. Silakan coba lagi dalam beberapa saat.'];
         }
     }
 

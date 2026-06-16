@@ -36,4 +36,8 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
     ],
 
+    'ors' => [
+    'key' => env('ORS_API_KEY'),
+],
+
 ];
