@@ -319,6 +319,22 @@ function renderItinerary(data) {
         itineraryTab.innerHTML += buildDayCard(day, i + 1);
     });
 
+    // Lazy-load destination images after DOM is painted
+    requestAnimationFrame(() => {
+        (data.schedule || []).forEach((day, dayIdx) => {
+            (day.activities || []).forEach((act, actIdx) => {
+                const id    = `act-img-${dayIdx + 1}-${actIdx}`;
+                const imgEl = document.getElementById(id);
+                const skEl  = document.getElementById(`${id}-sk`);
+                const wrapEl= document.getElementById(`${id}-wrapper`);
+                if (!imgEl || !wrapEl) return;
+                imgEl.addEventListener('load',  () => { imgEl.classList.remove('opacity-0'); imgEl.classList.add('opacity-100'); skEl?.classList.add('hidden'); });
+                imgEl.addEventListener('error', () => { wrapEl.classList.add('hidden'); });
+                _loadWikiImage(act.place, imgEl, skEl, wrapEl);
+            });
+        });
+    });
+
     // Render budget
     renderBudget(data.budget || []);
 
@@ -326,25 +342,73 @@ function renderItinerary(data) {
     renderTips(data.tips || []);
 }
 
+// ── Wikipedia image fetcher ───────────────────────────────────
+const _imgCache = {};
+
+async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
+    const fallbackSrc = `https://picsum.photos/seed/${encodeURIComponent(placeName)}/640/360`;
+    if (_imgCache[placeName] !== undefined) {
+        const cached = _imgCache[placeName];
+        imgEl.src = cached || fallbackSrc;
+        return;
+    }
+    const tryWiki = async (lang) => {
+        const wikiDomain = '{{ env('WIKIMEDIA_API_DOMAIN', 'wikipedia.org') }}';
+        const q   = encodeURIComponent(placeName);
+        const url = `https://${lang}.${wikiDomain}/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=640&origin=*`;
+        const res = await fetch(url);
+        const j   = await res.json();
+        const pg  = Object.values(j.query?.pages || {})[0];
+        return pg?.thumbnail?.source || null;
+    };
+    try {
+        const src = (await tryWiki('en')) || (await tryWiki('id'));
+        _imgCache[placeName] = src || null;
+        imgEl.src = src || fallbackSrc;
+    } catch {
+        _imgCache[placeName] = null;
+        imgEl.src = fallbackSrc;
+    }
+}
+
 function buildDayCard(day, dayNum) {
-    const activities = (day.activities || []).map(act => `
-        <div class="flex gap-3 py-3 border-b border-stone-100 last:border-0 last:pb-0">
-            <div class="text-center w-14 flex-shrink-0">
-                <p class="text-xs font-semibold text-terracotta">${act.time || ''}</p>
-                <span class="inline-block w-0.5 h-5 bg-stone-200 mx-auto mt-1"></span>
-            </div>
-            <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="material-icons-round text-stone-400 text-base">${getActivityIcon(act.category)}</span>
-                        <p class="text-sm font-semibold text-stone-800">${act.place}</p>
-                    </div>
-                    ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0">${act.ticket}</span>` : ''}
+    const activities = (day.activities || []).map((act, idx) => {
+        const isLast = idx === (day.activities.length - 1);
+        const actId  = `act-img-${dayNum}-${idx}`;
+
+        return `
+        <div class="py-3 ${isLast ? '' : 'border-b border-stone-100'}">
+            <div class="flex gap-3">
+                <div class="text-center w-14 flex-shrink-0 pt-0.5">
+                    <p class="text-xs font-semibold text-terracotta">${act.time || ''}</p>
+                    ${!isLast ? `<span class="inline-block w-0.5 h-5 bg-stone-200 mx-auto mt-1"></span>` : ''}
                 </div>
-                ${act.description ? `<p class="text-xs text-stone-400 mt-1 ml-6">${act.description}</p>` : ''}
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="material-icons-round text-stone-400 text-base">${getActivityIcon(act.category)}</span>
+                            <p class="text-sm font-semibold text-stone-800">${act.place}</p>
+                        </div>
+                        ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0">${act.ticket}</span>` : ''}
+                    </div>
+                    ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
+                    <div id="${actId}-wrapper" class="ml-6 rounded-xl overflow-hidden border border-stone-100 bg-stone-50 relative" style="height:148px;">
+                        <img id="${actId}" alt="${act.place}"
+                             class="w-full h-full object-cover transition-opacity duration-500 opacity-0" />
+                        <div id="${actId}-sk" class="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+                            <div class="w-8 h-8 bg-stone-200 rounded-xl animate-pulse flex items-center justify-center">
+                                <span class="material-icons-round text-stone-300 text-base">image</span>
+                            </div>
+                            <p class="text-xs text-stone-300">Memuat foto…</p>
+                        </div>
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/55 to-transparent px-3 py-2 pointer-events-none">
+                            <p class="text-white text-xs font-medium truncate">${act.place}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 
     return `
         <div class="bg-white rounded-2xl border border-stone-100 overflow-hidden">
