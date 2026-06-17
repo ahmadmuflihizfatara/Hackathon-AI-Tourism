@@ -50,14 +50,26 @@ class GeminiService
         ];
 
         try {
-          // Prevent PHP process from timing out too quickly for longer API calls.
           if (function_exists('set_time_limit')) {
-            @set_time_limit(60);
+            @set_time_limit(120); // Perpanjang max execution time PHP
           }
 
-          // Use a reasonable timeout and a short connect timeout to fail fast on network issues.
-          $response = Http::timeout(20)
-            ->withOptions(['connect_timeout' => 5])
+          // Implementasi Retry dengan Exponential Backoff dan Pengaturan Timeout
+          $response = Http::retry(3, function (int $attempt, \Exception $exception) {
+              return $attempt * 2000; // Exponential backoff: 2s, 4s, 6s
+          }, function (\Exception $exception) {
+              // Retry jika terjadi masalah koneksi
+              if ($exception instanceof \Illuminate\Http\Client\ConnectionException) {
+                  return true;
+              }
+              // Retry jika status code adalah 429 (Rate Limit) atau 5xx (Server Errors)
+              if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                  return in_array($exception->response->status(), [429, 500, 502, 503, 504]);
+              }
+              return false;
+          }, false) // Parameter throw = false agar mengembalikan response saat max retries tercapai
+            ->timeout(60) // Timeout request dinaikkan menjadi 60 detik
+            ->withOptions(['connect_timeout' => 10]) // Timeout koneksi 10 detik
             ->withoutVerifying()
             ->withQueryParameters(['key' => $this->apiKey])
             ->post($this->apiUrl, $payload);
