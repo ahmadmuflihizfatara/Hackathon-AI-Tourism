@@ -126,7 +126,7 @@
             <div id="itinerary-content" class="hidden flex-1 overflow-y-auto">
 
                 {{-- Destination Header --}}
-                <div id="destination-header" class="relative bg-terracotta px-6 pt-8 pb-6 overflow-hidden">
+                <div id="destination-header" class="relative bg-terracotta px-6 pt-8 pb-6 overflow-hidden flex-shrink-0">
                     <div class="absolute inset-0 opacity-10">
                         <div class="absolute top-0 right-0 w-48 h-48 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
                         <div class="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
@@ -159,7 +159,7 @@
                 </div>
 
                 {{-- Tabs: Itinerary / Budget / Tips / Rute / Aturan / Kendaraan --}}
-                <div class="bg-white border-b border-stone-100 px-4 overflow-x-auto">
+                <div class="bg-white border-b border-stone-100 px-4 overflow-x-auto flex-shrink-0">
                     <div class="flex gap-0 min-w-max">
                         @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips', 'rute' => 'Rute', 'aturan' => 'Aturan', 'kendaraan' => 'Kendaraan'] as $tab => $label)
                         <button onclick="switchTab('{{ $tab }}')"
@@ -176,39 +176,39 @@
                 </div>
 
                 {{-- Tab: Itinerary --}}
-                <div id="tab-itinerary" class="p-5 space-y-4">
+                <div id="tab-itinerary" class="p-5 space-y-4 flex-shrink-0">
                     {{-- Day cards injected by JS --}}
                 </div>
 
                 {{-- Tab: Budget --}}
-                <div id="tab-budget" class="hidden p-5">
+                <div id="tab-budget" class="hidden p-5 flex-shrink-0">
                     <div id="budget-content" class="space-y-3">
                         {{-- Budget items injected by JS --}}
                     </div>
                 </div>
 
                 {{-- Tab: Tips --}}
-                <div id="tab-tips" class="hidden p-5">
+                <div id="tab-tips" class="hidden p-5 flex-shrink-0">
                     <div id="tips-content" class="space-y-3">
                         {{-- Tips injected by JS --}}
                     </div>
                 </div>
 
                 {{-- Tab: Rute ← TAMBAHKAN BLOK INI --}}
-                <div id="tab-rute" class="hidden p-5 space-y-4">
+                <div id="tab-rute" class="hidden p-5 space-y-4 flex-shrink-0">
                     <div id="map-route" class="w-full h-[360px] rounded-2xl border border-stone-100"></div>
                 <div id="route-summary" class="space-y-3"></div>
                 </div>
 
                 {{-- Tab: Aturan Tempat Wisata --}}
-                <div id="tab-aturan" class="hidden p-5 space-y-3">
+                <div id="tab-aturan" class="hidden p-5 space-y-3 flex-shrink-0">
                     <div id="aturan-content" class="space-y-3">
                         {{-- Aturan tempat wisata diinjeksi oleh JS --}}
                     </div>
                 </div>
 
                 {{-- Tab: Rekomendasi Kendaraan --}}
-                <div id="tab-kendaraan" class="hidden p-5 space-y-3">
+                <div id="tab-kendaraan" class="hidden p-5 space-y-3 flex-shrink-0">
                     <div id="kendaraan-content" class="space-y-3">
                         {{-- Rekomendasi kendaraan diinjeksi oleh JS --}}
                     </div>
