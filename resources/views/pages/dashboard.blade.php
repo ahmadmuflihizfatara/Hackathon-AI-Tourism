@@ -713,6 +713,11 @@ function switchTab(name) {
             btn.classList.add('border-transparent', 'text-stone-400');
         }
     });
+
+     if (name === 'rute' && leafletMap) {
+        setTimeout(() => leafletMap.invalidateSize(), 100);
+    }
+
 }
 
 // ── Message helpers ───────────────────────────────────────────
