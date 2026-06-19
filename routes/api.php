@@ -16,3 +16,9 @@ use App\Http\Controllers\MapController;
 
 Route::post('/route/optimize', [MapController::class, 'optimize']);
 Route::post('/route/directions', [MapController::class, 'directions']);
+
+use App\Http\Controllers\DestinationController;
+
+// Endpoint gambar destinasi (tanpa auth, bebas diakses frontend)
+Route::get('/destinations/image',   [DestinationController::class, 'getImage']);
+Route::post('/destinations/images', [DestinationController::class, 'getBatchImages']);
