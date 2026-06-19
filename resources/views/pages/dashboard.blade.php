@@ -342,20 +342,7 @@ function renderItinerary(data) {
     });
 
     // Lazy-load destination images after DOM is painted
-    requestAnimationFrame(() => {
-        (data.schedule || []).forEach((day, dayIdx) => {
-            (day.activities || []).forEach((act, actIdx) => {
-                const id    = `act-img-${dayIdx + 1}-${actIdx}`;
-                const imgEl = document.getElementById(id);
-                const skEl  = document.getElementById(`${id}-sk`);
-                const wrapEl= document.getElementById(`${id}-wrapper`);
-                if (!imgEl || !wrapEl) return;
-                imgEl.addEventListener('load',  () => { imgEl.classList.remove('opacity-0'); imgEl.classList.add('opacity-100'); skEl?.classList.add('hidden'); });
-                imgEl.addEventListener('error', () => { wrapEl.classList.add('hidden'); });
-                _loadWikiImage(act.place, imgEl, skEl, wrapEl);
-            });
-        });
-    });
+    requestAnimationFrame(() => loadAllDestinationImages(data.schedule));
 
     // Render budget
     renderBudget(data.budget || []);
@@ -368,19 +355,97 @@ function renderItinerary(data) {
 }
 
 // ── HD Image fetcher (multi-source) ──────────────────────────
-const _imgCache = {};
-const _hdImgCache = {}; // stores full-resolution URLs for lightbox
 
-async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
+// ── DB-First Image fetcher ────────────────────────────────────────────────────
+//
+// Alur baru:
+//   1. Batch-fetch semua nama tempat ke /api/destinations/images  (1 request)
+//   2. Jika DB punya gambar → pakai langsung (akurat, cepat)
+//   3. Jika tidak ada di DB  → fallback ke Wikipedia API (existing logic)
+//   4. Terakhir              → picsum placeholder
+
+const _imgCache   = {};   // thumb/display URL
+const _hdImgCache = {};   // full-res URL untuk lightbox
+
+// ── Batch-load images right after itinerary is rendered ──────────────────────
+async function loadAllDestinationImages(scheduleData) {
+    // Helper: ambil nama lokasi dari format baru (location) atau lama (place)
+    const getPlaceName = (act) => act.location || act.place || '';
+    // Kumpulkan semua nama tempat unik
+    const allPlaces = [];
+    (scheduleData || []).forEach(day => {
+        (day.activities || []).forEach(act => {
+            const placeName = act.location || act.place;
+            if (placeName && !allPlaces.includes(placeName)) {
+                allPlaces.push(placeName);
+            }
+        });
+    });
+
+    if (allPlaces.length === 0) return;
+
+    try {
+        // Satu request ke Laravel → dapat semua gambar DB sekaligus
+        const res = await fetch('/api/destinations/images', {
+            method : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN' : document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ places: allPlaces }),
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            // Pre-populate cache dengan data DB
+            Object.entries(data.images || {}).forEach(([place, info]) => {
+                if (info.url) {
+                    _imgCache[place]   = info.url;
+                    _hdImgCache[place] = info.url;
+                }
+            });
+        }
+    } catch (e) {
+        // Tidak kritis — lanjut ke Wikipedia fallback
+        console.warn('[NusantaraAI] Batch image prefetch gagal:', e);
+    }
+
+    // Sekarang pasang gambar ke setiap <img> element
+    (scheduleData || []).forEach((day, dayIdx) => {
+        (day.activities || []).forEach((act, actIdx) => {
+            const id    = `act-img-${dayIdx + 1}-${actIdx}`;
+            const imgEl = document.getElementById(id);
+            const skEl  = document.getElementById(`${id}-sk`);
+            const wrapEl= document.getElementById(`${id}-wrapper`);
+            if (!imgEl || !wrapEl) return;
+
+            imgEl.addEventListener('load',  () => {
+                imgEl.classList.remove('opacity-0');
+                imgEl.classList.add('opacity-100');
+                skEl?.classList.add('hidden');
+            });
+            imgEl.addEventListener('error', () => {
+                wrapEl.classList.add('hidden');
+            });
+
+            _loadDestinationImage(act.location || act.place, imgEl, skEl, wrapEl);
+        });
+    });
+}
+
+// ── Per-image loader (DB cache → Wikipedia → Picsum) ─────────────────────────
+async function _loadDestinationImage(placeName, imgEl, skeletonEl, wrapperEl) {
     const fallbackSrc = `https://picsum.photos/seed/${encodeURIComponent(placeName)}/1280/720`;
+
+    // Sudah ada di cache (dari DB atau sebelumnya)?
     if (_imgCache[placeName] !== undefined) {
-        const cached = _imgCache[placeName];
-        imgEl.src = cached || fallbackSrc;
+        imgEl.src = _imgCache[placeName] || fallbackSrc;
         return;
     }
+
+    // Belum ada di DB cache → coba Wikipedia
     const wikiDomain = '{{ env("WIKIMEDIA_API_DOMAIN", "wikipedia.org") }}';
 
-    // Strategy 1: Wikipedia pageimages with HD resolution (2000px)
     const tryWikiPageImage = async (lang) => {
         const q   = encodeURIComponent(placeName);
         const url = `https://${lang}.${wikiDomain}/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=2000&origin=*`;
@@ -390,49 +455,39 @@ async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
         return pg?.thumbnail?.source || null;
     };
 
-    // Strategy 2: Wikimedia Commons image search for HD photos
     const tryWikimediaCommons = async () => {
         const q   = encodeURIComponent(placeName + ' landmark');
         const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${q}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=2000&format=json&origin=*`;
         try {
-            const res = await fetch(url);
-            const j   = await res.json();
+            const res   = await fetch(url);
+            const j     = await res.json();
             const pages = Object.values(j.query?.pages || {});
-            // Find the first non-audio file with a thumbnail
             for (const pg of pages) {
                 const thumbUrl = pg?.imageinfo?.[0]?.thumburl;
                 const origUrl  = pg?.imageinfo?.[0]?.url;
-                if (thumbUrl) {
-                    return { thumb: thumbUrl, original: origUrl };
-                }
+                if (thumbUrl) return { thumb: thumbUrl, original: origUrl };
             }
         } catch { /* ignore */ }
         return null;
     };
 
     try {
-        // Try Wikipedia pageimages first (most relevant)
         const wikiSrc = (await tryWikiPageImage('id')) || (await tryWikiPageImage('en'));
-
         if (wikiSrc) {
-            _imgCache[placeName] = wikiSrc;
-            // Store original URL for lightbox (strip /thumb/ to get full-res)
-            const fullUrl = wikiSrc.replace(/\/thumb\//, '/').replace(/\/\d+px-[^/]+$/, '');
-            _hdImgCache[placeName] = fullUrl;
+            _imgCache[placeName]   = wikiSrc;
+            _hdImgCache[placeName] = wikiSrc.replace(/\/thumb\//, '/').replace(/\/\d+px-[^/]+$/, '');
             imgEl.src = wikiSrc;
             return;
         }
 
-        // Fallback: Wikimedia Commons search
         const commonsResult = await tryWikimediaCommons();
         if (commonsResult) {
-            _imgCache[placeName] = commonsResult.thumb;
+            _imgCache[placeName]   = commonsResult.thumb;
             _hdImgCache[placeName] = commonsResult.original || commonsResult.thumb;
             imgEl.src = commonsResult.thumb;
             return;
         }
 
-        // Last resort: picsum placeholder at HD resolution
         _imgCache[placeName] = fallbackSrc;
         imgEl.src = fallbackSrc;
     } catch {
@@ -440,6 +495,8 @@ async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
         imgEl.src = fallbackSrc;
     }
 }
+
+
 
 // ── Lightbox ─────────────────────────────────────────────────
 function openLightbox(placeName) {
@@ -483,26 +540,42 @@ function buildDayCard(day, dayNum) {
     const activities = (day.activities || []).map((act, idx) => {
         const isLast = idx === (day.activities.length - 1);
         const actId  = `act-img-${dayNum}-${idx}`;
-        const escapedPlace = (act.place || '').replace(/'/g, "\\'");
+
+        // Dukungan dua format:
+        // Format BARU: { action, location, ... }  → tampil dua baris
+        // Format LAMA: { place, ... }             → fallback satu baris (kompatibel mundur)
+        const hasActionLocation = act.action && act.location;
+        const displayLocation   = hasActionLocation ? act.location : (act.place || '');
+        const displayAction     = hasActionLocation ? act.action   : null;
+        const escapedPlace      = (act.location || act.place || '').replace(/'/g, "\\'");
 
         return `
         <div class="py-3 ${isLast ? '' : 'border-b border-stone-100'}">
             <div class="flex gap-3">
+                {{-- Kolom kiri: jam + garis vertikal --}}
                 <div class="text-center w-14 flex-shrink-0 pt-0.5">
                     <p class="text-xs font-semibold text-terracotta">${act.time || ''}</p>
                     ${!isLast ? `<span class="inline-block w-0.5 h-5 bg-stone-200 mx-auto mt-1"></span>` : ''}
                 </div>
+
+                {{-- Kolom kanan: konten aktivitas --}}
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between gap-2 mb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="material-icons-round text-stone-400 text-base">${getActivityIcon(act.category)}</span>
-                            <p class="text-sm font-semibold text-stone-800">${act.place}</p>
+                        <div class="flex items-start gap-2 min-w-0">
+                            <span class="material-icons-round text-stone-400 text-base mt-0.5 flex-shrink-0">${getActivityIcon(act.category)}</span>
+                            <div class="min-w-0">
+                                ${displayAction
+                                    ? `<p class="text-xs font-medium text-terracotta leading-tight">${displayAction}</p>
+                                       <p class="text-sm font-semibold text-stone-800 leading-snug truncate">${displayLocation}</p>`
+                                    : `<p class="text-sm font-semibold text-stone-800 leading-snug truncate">${displayLocation}</p>`
+                                }
+                            </div>
                         </div>
-                        ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0">${act.ticket}</span>` : ''}
+                        ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">${act.ticket}</span>` : ''}
                     </div>
                     ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
                     <div id="${actId}-wrapper" class="ml-6 rounded-xl overflow-hidden border border-stone-100 bg-stone-50 relative cursor-pointer group" style="height:220px;" onclick="openLightbox('${escapedPlace}')">
-                        <img id="${actId}" alt="${act.place}"
+                        <img id="${actId}" alt="${act.location || act.place}"
                              class="w-full h-full object-cover transition-all duration-500 opacity-0 group-hover:scale-105" loading="lazy" />
                         <div id="${actId}-sk" class="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
                             <div class="w-9 h-9 bg-stone-200 rounded-xl animate-pulse flex items-center justify-center">
@@ -511,7 +584,11 @@ function buildDayCard(day, dayNum) {
                             <p class="text-xs text-stone-300">Memuat foto HD…</p>
                         </div>
                         <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
-                            <p class="text-white text-sm font-medium truncate drop-shadow">${act.place}</p>
+                            ${displayAction
+                                ? `<p class="text-white/70 text-xs leading-tight">${displayAction}</p>
+                                   <p class="text-white text-sm font-medium truncate drop-shadow">${displayLocation}</p>`
+                                : `<p class="text-white text-sm font-medium truncate drop-shadow">${displayLocation}</p>`
+                            }
                         </div>
                         <div class="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                             <span class="text-white text-xs flex items-center gap-1">
@@ -614,7 +691,7 @@ function renderMap(data) {
     const routeSummary = document.getElementById('route-summary');
     if (!mapRoute || !routeSummary) return;
 
-    const places = (data.schedule || []).flatMap(day => (day.activities || []).map(act => act.place || '')).filter(Boolean);
+    const places = (data.schedule || []).flatMap(day => (day.activities || []).map(act => act.location || act.place || '')).filter(Boolean);
 
     // Initialize Leaflet map centered on Indonesia (default)
     setTimeout(() => {

@@ -92,6 +92,7 @@ class GeminiService
           }
 
           $text = $response->json('candidates.0.content.parts.0.text', '');
+          Log::info('Gemini raw response', ['text' => $text]);
           return $this->parseResponse($text);
 
         } catch (\Exception $e) {
@@ -107,27 +108,43 @@ class GeminiService
      */
     protected function parseResponse(string $text): array
     {
-        // Try to extract JSON block from response
-        if (preg_match('/```json\s*([\s\S]*?)\s*```/', $text, $matches)) {
-            $json = $matches[1];
-        } elseif (preg_match('/\{[\s\S]*"destination"[\s\S]*\}/', $text, $matches)) {
-            $json = $matches[0];
-        } else {
-            // Plain chat response
-            return ['message' => trim($text)];
+        $json = null;
+        
+        // Try to extract JSON block using string functions (safer than regex for large text)
+        if (($start = strpos(strtolower($text), '```json')) !== false) {
+            $start += 7;
+            if (($end = strpos($text, '```', $start)) !== false) {
+                $json = substr($text, $start, $end - $start);
+            } else {
+                $json = substr($text, $start); // truncated
+            }
+        } elseif (($start = strpos($text, '{')) !== false && strpos($text, '"destination"') !== false) {
+            $end = strrpos($text, '}');
+            if ($end !== false && $end > $start) {
+                $json = substr($text, $start, $end - $start + 1);
+            } else {
+                $json = substr($text, $start); // truncated
+            }
         }
 
-        try {
-            $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        if ($json) {
+            try {
+                $json = trim($json);
+                // Try to strip trailing commas which often break json_decode
+                $json = preg_replace('/,\s*([\]}])/m', '$1', $json);
+                
+                $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
-            if (isset($data['destination'])) {
-                return [
-                    'itinerary' => $data,
-                    'message'   => "Itinerary untuk **{$data['destination']}** sudah siap! 🎉 Cek panel kanan untuk detail lengkapnya. Ada yang ingin diubah atau ditambah?",
-                ];
+                if (isset($data['destination'])) {
+                    return [
+                        'itinerary' => $data,
+                        'message'   => "Itinerary untuk **{$data['destination']}** sudah siap! 🎉 Cek panel kanan untuk detail lengkapnya. Ada yang ingin diubah atau ditambah?",
+                    ];
+                }
+            } catch (\JsonException $e) {
+                Log::warning('Gemini JSON parse error', ['error' => $e->getMessage()]);
+                return ['message' => 'Maaf, itinerary berhasil dibuat namun formatnya terpotong atau tidak valid. Silakan coba "Mulai Ulang" atau kirim ulang permintaanmu.'];
             }
-        } catch (\JsonException $e) {
-            Log::warning('Gemini JSON parse error', ['json' => $json]);
         }
 
         return ['message' => trim($text)];
@@ -163,7 +180,8 @@ Ketika membuat itinerary, HARUS dalam format JSON ini:
       "activities": [
         {
           "time": "08.00",
-          "place": "Nama Tempat",
+          "action": "Kata kerja singkat aktivitas",
+          "location": "Nama lokasi/tempat spesifik",
           "category": "alam|pantai|museum|kuliner|hotel|belanja|transport|budaya",
           "description": "Deskripsi singkat 1-2 kalimat",
           "ticket": "Rp 50.000 (opsional, null jika gratis)"
@@ -230,6 +248,23 @@ ATURAN PENTING:
 - Kategori wisata: alam, pantai, museum, kuliner, budaya, belanja, transport, hotel
 - Tambahkan tips lokal yang praktis dan bermanfaat
 - Jika informasi tidak lengkap, tanyakan: provinsi/kota tujuan, berapa hari, budget total
+- SANGAT PENTING: Format JSON harus valid. JANGAN gunakan trailing comma. PASTIKAN semua kurung kurawal } dan kurung siku ] tertutup sempurna di akhir JSON.
+
+ATURAN FIELD action DAN location (WAJIB DIIKUTI):
+Field "action" berisi kata kerja / aktivitas singkat (1-3 kata), dan "location" berisi nama tempat spesifiknya.
+Keduanya WAJIB ada di setiap aktivitas. JANGAN gunakan field "place" lagi.
+
+Contoh yang BENAR:
+- "action": "Tiba di",        "location": "Bandara Sultan Mahmud Badaruddin II"
+- "action": "Check-in",       "location": "Hotel Aryaduta Palembang"
+- "action": "Kunjungi",       "location": "Jembatan Ampera"
+- "action": "Makan Siang",    "location": "RM Pindang Musi Rawas"
+- "action": "Jelajahi",       "location": "Kawasan Benteng Kuto Besak"
+- "action": "Sewa Motor",     "location": "Rental Motor Seminyak"
+- "action": "Nikmati Sunset", "location": "Pantai Tanah Lot"
+- "action": "Belanja",        "location": "Pasar Seni Sukawati"
+- "action": "Check-out",      "location": "Hotel / Penginapan"
+- "action": "Makan Malam",    "location": "Warung Sate Pak Budi"
 
 BAHASA: Selalu gunakan Bahasa Indonesia yang ramah, hangat, dan antusias.
 PROMPT;
