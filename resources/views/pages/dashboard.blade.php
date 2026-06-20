@@ -974,7 +974,7 @@ function switchTab(name) {
     });
 
      if (name === 'rute' && leafletMap) {
-        setTimeout(() => leafletMap.invalidateSize(), 100);
+        setTimeout(() => leafletMap.invalidateSize(), 150);
     }
 
 }
