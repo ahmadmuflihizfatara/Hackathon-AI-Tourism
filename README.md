@@ -160,6 +160,91 @@ Browser
 
 ---
 
+## 🖼️ Sistem Gambar Multi-Source (Unsplash → Pexels → Wikimedia)
+
+Aplikasi menggunakan sistem fallback berlapis untuk mendapatkan gambar destinasi berkualitas tinggi. Wikimedia yang sebelumnya digunakan langsung dari frontend kini menjadi fallback terakhir di backend.
+
+### Urutan Prioritas
+
+```
+Permintaan gambar dari frontend (satu batch POST)
+        │
+        ▼
+[1] Database Lokal (tabel destinations)
+        │ Tidak ada →
+        ▼
+[2] Unsplash API  ← UTAMA (50 req/jam, gratis)
+        │ Tidak ada / key kosong →
+        ▼
+[3] Pexels API    ← BACKUP (200 req/jam, gratis)
+        │ Tidak ada / key kosong →
+        ▼
+[4] Wikimedia Commons  ← FALLBACK (tanpa key)
+        │ Tidak ada →
+        ▼
+[5] Picsum placeholder (client-side, random)
+```
+
+> Semua hasil di-**cache 24 jam** via Laravel Cache sehingga kuota API tidak terbuang untuk destinasi yang sama.
+
+---
+
+### 🔑 Setup API Keys Gambar
+
+#### A. Unsplash (Sumber Utama — GRATIS)
+
+1. Buka **https://unsplash.com/developers**
+2. Klik **"Your Apps"** → **"New Application"**
+3. Isi nama & deskripsi, centang semua persetujuan
+4. Scroll ke bawah → copy **"Access Key"** (bukan "Secret Key")
+5. Tambahkan ke `.env`:
+
+```env
+UNSPLASH_ACCESS_KEY=your_unsplash_access_key_here
+```
+
+#### B. Pexels (Backup — GRATIS)
+
+1. Buka **https://www.pexels.com/api/**
+2. Klik **"Get Started"** dan login/daftar
+3. Isi form penggunaan API, tunggu persetujuan (biasanya instan)
+4. Copy API Key dari dashboard
+5. Tambahkan ke `.env`:
+
+```env
+PEXELS_API_KEY=your_pexels_api_key_here
+```
+
+#### C. Wikimedia (Fallback — Tanpa Key)
+
+Tidak perlu konfigurasi. Wikimedia sudah terintegrasi sebagai fallback otomatis.
+
+---
+
+### 📁 File yang Perlu Ditambahkan / Diubah
+
+| File | Aksi |
+|---|---|
+| `app/Services/DestinationImageService.php` | ✅ **File baru** — service fallback chain |
+| `config/services.php` | ✏️ **Edit** — tambahkan blok `unsplash` dan `pexels` |
+| `.env` | ✏️ **Edit** — isi `UNSPLASH_ACCESS_KEY` dan `PEXELS_API_KEY` |
+| `resources/views/pages/dashboard.blade.php` | ✏️ **Edit** — update fungsi JS image fetcher |
+
+#### Perbarui `config/services.php` — tambahkan di bawah blok `gemini`:
+
+```php
+// Image APIs (fallback chain: Unsplash → Pexels → Wikimedia)
+'unsplash' => [
+    'access_key' => env('UNSPLASH_ACCESS_KEY'),
+],
+
+'pexels' => [
+    'api_key' => env('PEXELS_API_KEY'),
+],
+```
+
+---
+
 ## ▶️ Menjalankan Aplikasi Lokal
 
 Buka **2 terminal** secara bersamaan:
@@ -209,6 +294,16 @@ Lalu buka browser: **http://localhost:8000**
 ---
 
 ## 🛠️ Troubleshooting
+
+### ❌ Gambar destinasi tidak muncul / semua placeholder
+→ Pastikan `UNSPLASH_ACCESS_KEY` dan `PEXELS_API_KEY` sudah diisi di `.env`  
+→ Jalankan `php artisan config:clear` setelah mengubah `.env`  
+→ Cek log di `storage/logs/laravel.log` untuk detail error API  
+→ Cek kuota Unsplash di https://unsplash.com/oauth/applications (50 req/jam)  
+→ Cek kuota Pexels di https://www.pexels.com/api/
+
+### ❌ Cache gambar tidak terupdate (foto masih lama setelah ganti key)
+→ Jalankan `php artisan cache:clear` untuk menghapus cache gambar (24 jam TTL)
 
 ### ❌ Error: "API Key tidak valid"
 → Pastikan `.env` sudah diisi `GEMINI_API_KEY` dengan benar  

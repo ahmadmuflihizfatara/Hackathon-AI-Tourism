@@ -25,19 +25,31 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Google Gemini AI
-    | Daftarkan API Key gratis di: https://aistudio.google.com/app/apikey
-    |--------------------------------------------------------------------------
-    */
+    // ── AI ─────────────────────────────────────────────────────────────────
+
     'gemini' => [
         'key'   => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
     ],
 
-    'ors' => [
-    'key' => env('ORS_API_KEY'),
-],
+    // ── Image APIs (fallback chain: Unsplash → Pexels → Wikimedia) ─────────
+
+    /**
+     * Unsplash — sumber utama gambar destinasi
+     * Kuota gratis: 50 request/jam
+     * Daftar: https://unsplash.com/developers
+     */
+    'unsplash' => [
+        'access_key' => env('UNSPLASH_ACCESS_KEY'),
+    ],
+
+    /**
+     * Pexels — sumber backup gambar destinasi
+     * Kuota gratis: 200 request/jam, 20.000/bulan
+     * Daftar: https://www.pexels.com/api/
+     */
+    'pexels' => [
+        'api_key' => env('PEXELS_API_KEY'),
+    ],
 
 ];

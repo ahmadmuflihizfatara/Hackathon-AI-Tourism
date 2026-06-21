@@ -1,4 +1,8 @@
 <x-layouts.app>
+{{-- Leaflet Maps CSS --}}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 <div class="flex flex-col h-screen overflow-hidden">
 
     {{-- ========== TOP NAV ========== --}}
@@ -154,16 +158,16 @@
                     </div>
                 </div>
 
-                {{-- Tabs: Itinerary / Budget / Tips --}}
-                <div class="bg-white border-b border-stone-100 px-4">
-                    <div class="flex gap-0">
-                        @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips'] as $tab => $label)
+                {{-- Tabs: Itinerary / Budget / Tips / Rute / Aturan / Kendaraan --}}
+                <div class="bg-white border-b border-stone-100 px-4 overflow-x-auto flex-shrink-0">
+                    <div class="flex gap-0 min-w-max">
+                        @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips', 'rute' => 'Rute', 'aturan' => 'Aturan', 'kendaraan' => 'Kendaraan'] as $tab => $label)
                         <button onclick="switchTab('{{ $tab }}')"
                                 data-tab="{{ $tab }}"
-                                class="tab-btn flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all
+                                class="tab-btn flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap
                                        {{ $tab === 'itinerary' ? 'border-terracotta text-terracotta' : 'border-transparent text-stone-400 hover:text-stone-600' }}">
                             <span class="material-icons-round text-base">
-                                {{ $tab === 'itinerary' ? 'calendar_today' : ($tab === 'budget' ? 'payments' : 'lightbulb') }}
+                                {{ $tab === 'itinerary' ? 'calendar_today' : ($tab === 'budget' ? 'payments' : ($tab === 'tips' ? 'lightbulb' : ($tab === 'rute' ? 'route' : ($tab === 'aturan' ? 'gavel' : 'directions_car')))) }}
                             </span>
                             {{ $label }}
                         </button>
@@ -172,21 +176,41 @@
                 </div>
 
                 {{-- Tab: Itinerary --}}
-                <div id="tab-itinerary" class="p-5 space-y-4">
+                <div id="tab-itinerary" class="p-5 space-y-4 flex-shrink-0">
                     {{-- Day cards injected by JS --}}
                 </div>
 
                 {{-- Tab: Budget --}}
-                <div id="tab-budget" class="hidden p-5">
+                <div id="tab-budget" class="hidden p-5 flex-shrink-0">
                     <div id="budget-content" class="space-y-3">
                         {{-- Budget items injected by JS --}}
                     </div>
                 </div>
 
                 {{-- Tab: Tips --}}
-                <div id="tab-tips" class="hidden p-5">
+                <div id="tab-tips" class="hidden p-5 flex-shrink-0">
                     <div id="tips-content" class="space-y-3">
                         {{-- Tips injected by JS --}}
+                    </div>
+                </div>
+
+                {{-- Tab: Rute --}}
+                <div id="tab-rute" class="hidden p-5 space-y-4 flex-shrink-0">
+                    <div id="map-route" class="w-full h-[360px] rounded-2xl border border-stone-100"></div>
+                    <div id="route-summary" class="space-y-3"></div>
+                </div>
+
+                {{-- Tab: Aturan Tempat Wisata --}}
+                <div id="tab-aturan" class="hidden p-5 space-y-3 flex-shrink-0">
+                    <div id="aturan-content" class="space-y-3">
+                        {{-- Aturan tempat wisata diinjeksi oleh JS --}}
+                    </div>
+                </div>
+
+                {{-- Tab: Rekomendasi Kendaraan --}}
+                <div id="tab-kendaraan" class="hidden p-5 space-y-3 flex-shrink-0">
+                    <div id="kendaraan-content" class="space-y-3">
+                        {{-- Rekomendasi kendaraan diinjeksi oleh JS --}}
                     </div>
                 </div>
 
@@ -332,42 +356,116 @@ function renderItinerary(data) {
     });
 
     // Lazy-load destination images after DOM is painted
-    requestAnimationFrame(() => {
-        (data.schedule || []).forEach((day, dayIdx) => {
-            (day.activities || []).forEach((act, actIdx) => {
-                const id    = `act-img-${dayIdx + 1}-${actIdx}`;
-                const imgEl = document.getElementById(id);
-                const skEl  = document.getElementById(`${id}-sk`);
-                const wrapEl= document.getElementById(`${id}-wrapper`);
-                if (!imgEl || !wrapEl) return;
-                imgEl.addEventListener('load',  () => { imgEl.classList.remove('opacity-0'); imgEl.classList.add('opacity-100'); skEl?.classList.add('hidden'); });
-                imgEl.addEventListener('error', () => { wrapEl.classList.add('hidden'); });
-                _loadWikiImage(act.place, imgEl, skEl, wrapEl);
-            });
-        });
-    });
+    requestAnimationFrame(() => loadAllDestinationImages(data.schedule));
 
     // Render budget
     renderBudget(data.budget || []);
 
     // Render tips
     renderTips(data.tips || []);
+
+    // Render aturan tempat wisata
+    renderAturan(data.rules || data.aturan || []);
+
+    // Render rekomendasi kendaraan
+    renderKendaraan(data.transportation || data.kendaraan || []);
+
+    //Render route
+    renderMap(data);
 }
 
 // ── HD Image fetcher (multi-source) ──────────────────────────
-const _imgCache = {};
-const _hdImgCache = {}; // stores full-resolution URLs for lightbox
 
-async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
+// ── DB-First Image fetcher ────────────────────────────────────────────────────
+//
+// Alur baru:
+//   1. Batch-fetch semua nama tempat ke /api/destinations/images  (1 request)
+//   2. Jika DB punya gambar → pakai langsung (akurat, cepat)
+//   3. Jika tidak ada di DB  → fallback ke Wikipedia API (existing logic)
+//   4. Terakhir              → picsum placeholder
+
+const _imgCache   = {};   // thumb/display URL
+const _hdImgCache = {};   // full-res URL untuk lightbox
+
+// ── Batch-load images right after itinerary is rendered ──────────────────────
+async function loadAllDestinationImages(scheduleData) {
+    // Helper: ambil nama lokasi dari format baru (location) atau lama (place)
+    const getPlaceName = (act) => act.location || act.place || '';
+    // Kumpulkan semua nama tempat unik
+    const allPlaces = [];
+    (scheduleData || []).forEach(day => {
+        (day.activities || []).forEach(act => {
+            const placeName = act.location || act.place;
+            if (placeName && !allPlaces.includes(placeName)) {
+                allPlaces.push(placeName);
+            }
+        });
+    });
+
+    if (allPlaces.length === 0) return;
+
+    try {
+        // Satu request ke Laravel → dapat semua gambar DB sekaligus
+        const res = await fetch('/api/destinations/images', {
+            method : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN' : document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ places: allPlaces }),
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            // Pre-populate cache dengan data DB
+            Object.entries(data.images || {}).forEach(([place, info]) => {
+                if (info.url) {
+                    _imgCache[place]   = info.url;
+                    _hdImgCache[place] = info.url;
+                }
+            });
+        }
+    } catch (e) {
+        // Tidak kritis — lanjut ke Wikipedia fallback
+        console.warn('[NusantaraAI] Batch image prefetch gagal:', e);
+    }
+
+    // Sekarang pasang gambar ke setiap <img> element
+    (scheduleData || []).forEach((day, dayIdx) => {
+        (day.activities || []).forEach((act, actIdx) => {
+            const id    = `act-img-${dayIdx + 1}-${actIdx}`;
+            const imgEl = document.getElementById(id);
+            const skEl  = document.getElementById(`${id}-sk`);
+            const wrapEl= document.getElementById(`${id}-wrapper`);
+            if (!imgEl || !wrapEl) return;
+
+            imgEl.addEventListener('load',  () => {
+                imgEl.classList.remove('opacity-0');
+                imgEl.classList.add('opacity-100');
+                skEl?.classList.add('hidden');
+            });
+            imgEl.addEventListener('error', () => {
+                wrapEl.classList.add('hidden');
+            });
+
+            _loadDestinationImage(act.location || act.place, imgEl, skEl, wrapEl);
+        });
+    });
+}
+
+// ── Per-image loader (DB cache → Wikipedia → Picsum) ─────────────────────────
+async function _loadDestinationImage(placeName, imgEl, skeletonEl, wrapperEl) {
     const fallbackSrc = `https://picsum.photos/seed/${encodeURIComponent(placeName)}/1280/720`;
+
+    // Sudah ada di cache (dari DB atau sebelumnya)?
     if (_imgCache[placeName] !== undefined) {
-        const cached = _imgCache[placeName];
-        imgEl.src = cached || fallbackSrc;
+        imgEl.src = _imgCache[placeName] || fallbackSrc;
         return;
     }
-    const wikiDomain = '{{ env('WIKIMEDIA_API_DOMAIN', 'wikipedia.org') }}';
 
-    // Strategy 1: Wikipedia pageimages with HD resolution (2000px)
+    // Belum ada di DB cache → coba Wikipedia
+    const wikiDomain = '{{ env("WIKIMEDIA_API_DOMAIN", "wikipedia.org") }}';
+
     const tryWikiPageImage = async (lang) => {
         const q   = encodeURIComponent(placeName);
         const url = `https://${lang}.${wikiDomain}/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=2000&origin=*`;
@@ -377,49 +475,39 @@ async function _loadWikiImage(placeName, imgEl, skeletonEl, wrapperEl) {
         return pg?.thumbnail?.source || null;
     };
 
-    // Strategy 2: Wikimedia Commons image search for HD photos
     const tryWikimediaCommons = async () => {
         const q   = encodeURIComponent(placeName + ' landmark');
         const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${q}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=2000&format=json&origin=*`;
         try {
-            const res = await fetch(url);
-            const j   = await res.json();
+            const res   = await fetch(url);
+            const j     = await res.json();
             const pages = Object.values(j.query?.pages || {});
-            // Find the first non-audio file with a thumbnail
             for (const pg of pages) {
                 const thumbUrl = pg?.imageinfo?.[0]?.thumburl;
                 const origUrl  = pg?.imageinfo?.[0]?.url;
-                if (thumbUrl) {
-                    return { thumb: thumbUrl, original: origUrl };
-                }
+                if (thumbUrl) return { thumb: thumbUrl, original: origUrl };
             }
         } catch { /* ignore */ }
         return null;
     };
 
     try {
-        // Try Wikipedia pageimages first (most relevant)
         const wikiSrc = (await tryWikiPageImage('id')) || (await tryWikiPageImage('en'));
-
         if (wikiSrc) {
-            _imgCache[placeName] = wikiSrc;
-            // Store original URL for lightbox (strip /thumb/ to get full-res)
-            const fullUrl = wikiSrc.replace(/\/thumb\//, '/').replace(/\/\d+px-[^/]+$/, '');
-            _hdImgCache[placeName] = fullUrl;
+            _imgCache[placeName]   = wikiSrc;
+            _hdImgCache[placeName] = wikiSrc.replace(/\/thumb\//, '/').replace(/\/\d+px-[^/]+$/, '');
             imgEl.src = wikiSrc;
             return;
         }
 
-        // Fallback: Wikimedia Commons search
         const commonsResult = await tryWikimediaCommons();
         if (commonsResult) {
-            _imgCache[placeName] = commonsResult.thumb;
+            _imgCache[placeName]   = commonsResult.thumb;
             _hdImgCache[placeName] = commonsResult.original || commonsResult.thumb;
             imgEl.src = commonsResult.thumb;
             return;
         }
 
-        // Last resort: picsum placeholder at HD resolution
         _imgCache[placeName] = fallbackSrc;
         imgEl.src = fallbackSrc;
     } catch {
@@ -441,9 +529,14 @@ function openLightbox(placeName) {
     const hdSrc = _hdImgCache[placeName];
     const imgEl = document.querySelector(`img[alt="${CSS.escape(placeName)}"]`);
 
+    const sourceLabels = {
+        'unsplash': '📷 Foto dari Unsplash',
+        'pexels'  : '📷 Foto dari Pexels',
+    };
+
     if (hdSrc) {
         img.src = hdSrc;
-        caption.textContent = 'Sumber: Wikimedia Commons';
+        caption.textContent = '';
     } else if (imgEl) {
         img.src = imgEl.src;
         caption.textContent = '';
@@ -470,7 +563,14 @@ function buildDayCard(day, dayNum) {
     const activities = (day.activities || []).map((act, idx) => {
         const isLast = idx === (day.activities.length - 1);
         const actId  = `act-img-${dayNum}-${idx}`;
-        const escapedPlace = (act.place || '').replace(/'/g, "\\'");
+
+        // Dukungan dua format:
+        // Format BARU: { action, location, ... }  → tampil dua baris
+        // Format LAMA: { place, ... }             → fallback satu baris (kompatibel mundur)
+        const hasActionLocation = act.action && act.location;
+        const displayLocation   = hasActionLocation ? act.location : (act.place || '');
+        const displayAction     = hasActionLocation ? act.action   : null;
+        const escapedPlace      = (act.location || act.place || '').replace(/'/g, "\\'");
 
         return `
         <div class="py-3 ${isLast ? '' : 'border-b border-stone-100'}">
@@ -481,15 +581,21 @@ function buildDayCard(day, dayNum) {
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between gap-2 mb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="material-icons-round text-stone-400 text-base">${getActivityIcon(act.category)}</span>
-                            <p class="text-sm font-semibold text-stone-800">${act.place}</p>
+                        <div class="flex items-start gap-2 min-w-0">
+                            <span class="material-icons-round text-stone-400 text-base mt-0.5 flex-shrink-0">${getActivityIcon(act.category)}</span>
+                            <div class="min-w-0">
+                                ${displayAction
+                                    ? `<p class="text-xs font-medium text-terracotta leading-tight">${displayAction}</p>
+                                       <p class="text-sm font-semibold text-stone-800 leading-snug truncate">${displayLocation}</p>`
+                                    : `<p class="text-sm font-semibold text-stone-800 leading-snug truncate">${displayLocation}</p>`
+                                }
+                            </div>
                         </div>
-                        ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0">${act.ticket}</span>` : ''}
+                        ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">${act.ticket}</span>` : ''}
                     </div>
                     ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
                     <div id="${actId}-wrapper" class="ml-6 rounded-xl overflow-hidden border border-stone-100 bg-stone-50 relative cursor-pointer group" style="height:220px;" onclick="openLightbox('${escapedPlace}')">
-                        <img id="${actId}" alt="${act.place}"
+                        <img id="${actId}" alt="${displayLocation}"
                              class="w-full h-full object-cover transition-all duration-500 opacity-0 group-hover:scale-105" loading="lazy" />
                         <div id="${actId}-sk" class="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
                             <div class="w-9 h-9 bg-stone-200 rounded-xl animate-pulse flex items-center justify-center">
@@ -498,7 +604,11 @@ function buildDayCard(day, dayNum) {
                             <p class="text-xs text-stone-300">Memuat foto HD…</p>
                         </div>
                         <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
-                            <p class="text-white text-sm font-medium truncate drop-shadow">${act.place}</p>
+                            ${displayAction
+                                ? `<p class="text-white/70 text-xs leading-tight">${displayAction}</p>
+                                   <p class="text-white text-sm font-medium truncate drop-shadow">${displayLocation}</p>`
+                                : `<p class="text-white text-sm font-medium truncate drop-shadow">${displayLocation}</p>`
+                            }
                         </div>
                         <div class="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                             <span class="text-white text-xs flex items-center gap-1">
@@ -596,9 +706,260 @@ function renderTips(tips) {
     `).join('');
 }
 
+// ── Render Aturan Tempat Wisata ───────────────────────────────
+// Format item: { place, category, rules: [string,...], severity: 'wajib'|'larangan'|'anjuran', source_note }
+function renderAturan(rules) {
+    const container = document.getElementById('aturan-content');
+    if (!rules.length) {
+        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Aturan tempat wisata akan tersedia setelah itinerary dibuat.</p>';
+        return;
+    }
+
+    const intro = `
+        <div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-2 flex items-start gap-2.5">
+            <span class="material-icons-round text-amber-500 text-base mt-0.5">info</span>
+            <p class="text-xs text-amber-700 leading-relaxed">
+                Aturan berikut disusun berdasarkan kebijakan umum yang berlaku saat ini (kearifan lokal, regulasi kawasan konservasi/cagar budaya, dan protokol keselamatan). Selalu cek papan informasi atau petugas di lokasi karena kebijakan bisa berubah sewaktu-waktu.
+            </p>
+        </div>`;
+
+    container.innerHTML = intro + rules.map(item => {
+        const placeName = item.place || item.location || '';
+        const rulesList = item.rules || (Array.isArray(item.items) ? item.items : []);
+        return `
+        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden">
+            <div class="flex items-center gap-2.5 px-5 py-3 bg-stone-50 border-b border-stone-100">
+                <div class="w-8 h-8 bg-terracotta/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons-round text-terracotta text-base">${getAturanIcon(item.category)}</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-stone-700 truncate">${placeName}</p>
+                    ${item.category ? `<p class="text-xs text-stone-400">${item.category}</p>` : ''}
+                </div>
+            </div>
+            <ul class="px-5 py-3 space-y-2.5">
+                ${rulesList.map(r => renderAturanLine(r)).join('')}
+            </ul>
+            ${item.source_note ? `<p class="px-5 pb-3 text-xs text-stone-300 leading-relaxed">${item.source_note}</p>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function renderAturanLine(r) {
+    // r bisa string sederhana, atau object { text, type: 'wajib'|'larangan'|'anjuran' }
+    const text = typeof r === 'string' ? r : (r.text || '');
+    const type = typeof r === 'string' ? 'anjuran' : (r.type || 'anjuran');
+    const badge = {
+        wajib:    { label: 'Wajib',    cls: 'bg-blue-50 text-blue-600',    icon: 'check_circle' },
+        larangan: { label: 'Larangan', cls: 'bg-rose-50 text-rose-600',    icon: 'block' },
+        anjuran:  { label: 'Anjuran',  cls: 'bg-emerald/10 text-emerald-dark', icon: 'tips_and_updates' },
+    }[type] || { label: 'Info', cls: 'bg-stone-100 text-stone-500', icon: 'info' };
+
+    return `
+        <li class="flex items-start gap-2.5">
+            <span class="material-icons-round text-sm mt-0.5 flex-shrink-0 ${badge.cls.split(' ')[1]}">${badge.icon}</span>
+            <div class="min-w-0">
+                <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${badge.cls} mr-1.5">${badge.label}</span>
+                <span class="text-sm text-stone-600 leading-relaxed">${text}</span>
+            </div>
+        </li>`;
+}
+
+function getAturanIcon(category) {
+    const icons = {
+        'religi': 'temple_hindu', 'religius': 'temple_hindu', 'pantai': 'beach_access',
+        'gunung': 'landscape', 'konservasi': 'eco', 'cagar budaya': 'museum',
+        'taman nasional': 'park', 'air terjun': 'water_drop', 'desa adat': 'holiday_village',
+        'default': 'gavel'
+    };
+    return icons[category?.toLowerCase()] || icons.default;
+}
+
+// ── Render Rekomendasi Kendaraan ──────────────────────────────
+// Format item: { route/segment, vehicle_type, reason, road_condition,
+//                public_transport: { available, options: [{name, price_min, price_max, note}] } }
+function renderKendaraan(items) {
+    const container = document.getElementById('kendaraan-content');
+    if (!items.length) {
+        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Rekomendasi kendaraan akan tersedia setelah itinerary dibuat.</p>';
+        return;
+    }
+
+    const intro = `
+        <div class="bg-emerald/10 border border-emerald/20 rounded-xl px-4 py-3 mb-2 flex items-start gap-2.5">
+            <span class="material-icons-round text-emerald-dark text-base mt-0.5">directions_car</span>
+            <p class="text-xs text-emerald-dark leading-relaxed">
+                Rekomendasi disesuaikan dengan kondisi akses jalan di tiap lokasi. Beberapa daerah (jalur pegunungan, desa terpencil, gang sempit di kawasan wisata padat) lebih cocok diakses dengan motor atau kendaraan umum lokal dibanding mobil pribadi.
+            </p>
+        </div>`;
+
+    container.innerHTML = intro + items.map(item => {
+        const vehicleBadge = getVehicleBadge(item.vehicle_type);
+        const pt = item.public_transport || {};
+        const hasPT = pt.available !== false && (pt.options || []).length > 0;
+
+        return `
+        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden">
+            <div class="flex items-center justify-between gap-2 px-5 py-3 bg-stone-50 border-b border-stone-100">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 ${vehicleBadge.bg} rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span class="material-icons-round ${vehicleBadge.text} text-base">${vehicleBadge.icon}</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-stone-700 truncate">${item.segment || item.route || ''}</p>
+                        <p class="text-xs text-stone-400">${vehicleBadge.label}</p>
+                    </div>
+                </div>
+                ${item.road_condition ? `<span class="text-[10px] font-medium px-2 py-1 rounded-full ${getRoadBadge(item.road_condition).cls} whitespace-nowrap flex-shrink-0">${getRoadBadge(item.road_condition).label}</span>` : ''}
+            </div>
+            <div class="px-5 py-3 space-y-3">
+                ${item.reason ? `<p class="text-sm text-stone-600 leading-relaxed">${item.reason}</p>` : ''}
+
+                ${hasPT ? `
+                <div class="bg-stone-50 rounded-lg px-4 py-3">
+                    <p class="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Opsi Kendaraan Umum / Sewa</p>
+                    <div class="space-y-2">
+                        ${pt.options.map(o => `
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm text-stone-600 flex items-center gap-1.5">
+                                    <span class="material-icons-round text-stone-400 text-sm">${o.icon || 'directions_bus'}</span>
+                                    ${o.name}
+                                </span>
+                                <div class="text-right flex-shrink-0">
+                                    <p class="text-sm font-semibold text-stone-700">${formatPriceRange(o.price_min, o.price_max)}</p>
+                                    ${o.note ? `<p class="text-xs text-stone-400">${o.note}</p>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>` : (item.vehicle_type?.toLowerCase().includes('pribadi') ? '' : `
+                <p class="text-xs text-stone-400 italic">Kendaraan umum belum tersedia langsung ke lokasi ini — disarankan sewa kendaraan pribadi atau jasa ojek lokal.</p>
+                `)}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function getVehicleBadge(type) {
+    const t = (type || '').toLowerCase();
+    if (t.includes('motor')) return { icon: 'two_wheeler', label: 'Motor', bg: 'bg-amber-50', text: 'text-amber-500' };
+    if (t.includes('mobil') || t.includes('pribadi')) return { icon: 'directions_car', label: 'Mobil Pribadi / Sewa', bg: 'bg-blue-50', text: 'text-blue-600' };
+    if (t.includes('umum') || t.includes('bus') || t.includes('angkot')) return { icon: 'directions_bus', label: 'Kendaraan Umum', bg: 'bg-emerald/10', text: 'text-emerald-dark' };
+    if (t.includes('kapal') || t.includes('perahu') || t.includes('boat')) return { icon: 'directions_boat', label: 'Kapal / Perahu', bg: 'bg-cyan-50', text: 'text-cyan-600' };
+    if (t.includes('jalan') || t.includes('kaki')) return { icon: 'directions_walk', label: 'Jalan Kaki', bg: 'bg-stone-100', text: 'text-stone-500' };
+    return { icon: 'directions_car', label: type || 'Kendaraan', bg: 'bg-stone-100', text: 'text-stone-500' };
+}
+
+function getRoadBadge(condition) {
+    const c = (condition || '').toLowerCase();
+    if (c.includes('rusak') || c.includes('terbatas') || c.includes('sulit') || c.includes('sempit')) {
+        return { label: 'Akses Terbatas', cls: 'bg-rose-50 text-rose-600' };
+    }
+    if (c.includes('sedang') || c.includes('cukup')) {
+        return { label: 'Akses Sedang', cls: 'bg-amber-50 text-amber-600' };
+    }
+    return { label: 'Akses Mudah', cls: 'bg-emerald/10 text-emerald-dark' };
+}
+
+function formatPriceRange(min, max) {
+    if (min == null && max == null) return '—';
+    const fmt = (n) => 'Rp ' + Number(n).toLocaleString('id-ID');
+    if (min != null && max != null && min !== max) return `${fmt(min)} – ${fmt(max)}`;
+    return fmt(min ?? max);
+}
+
+function renderMap(data) {
+    const mapRoute = document.getElementById('map-route');
+    const routeSummary = document.getElementById('route-summary');
+    if (!mapRoute || !routeSummary) return;
+
+    const places = (data.schedule || []).flatMap(day => (day.activities || []).map(act => act.location || act.place || '')).filter(Boolean);
+
+    // Initialize Leaflet map centered on Indonesia (default)
+    setTimeout(() => {
+        // Remove existing map if any
+        if (window.routeMap) {
+            window.routeMap.remove();
+        }
+
+        const mapElement = document.getElementById('map-route');
+        if (!mapElement) return;
+
+        // Create map centered on Indonesia
+        window.routeMap = L.map('map-route').setView([-2.5489, 113.9213], 5);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(window.routeMap);
+
+        // Sample coordinates for major Indonesian cities (simplified)
+        const cityCoords = {
+            'Bali': [-8.6705, 115.2126],
+            'Lombok': [-8.6500, 116.3164],
+            'Jakarta': [-6.2088, 106.8456],
+            'Bandung': [-6.9175, 107.6062],
+            'Yogyakarta': [-7.7956, 110.3695],
+            'Surabaya': [-7.2575, 112.7521],
+            'Medan': [3.1952, 98.6722],
+            'Seminyak': [-8.6906, 115.1694],
+            'Ubud': [-8.5069, 115.2625],
+            'Denpasar': [-8.6726, 115.2126],
+            'Tanah Lot': [-8.6274, 115.1640],
+            'Pantai Seminyak': [-8.6906, 115.1694],
+            'Pantai Kuta': [-8.7245, 115.1720],
+        };
+
+        // Get coordinates for places (fallback to Indonesia center if not found)
+        const markers = [];
+        places.forEach((place, idx) => {
+            // Try to find matching city/location
+            let coords = null;
+            for (const [city, coord] of Object.entries(cityCoords)) {
+                if (place.toLowerCase().includes(city.toLowerCase())) {
+                    coords = coord;
+                    break;
+                }
+            }
+
+            if (coords) {
+                const marker = L.marker(coords, {
+                    opacity: 0.8
+                }).addTo(window.routeMap)
+                    .bindPopup(`<strong>${idx + 1}. ${place}</strong>`)
+                    .openPopup();
+                markers.push(marker);
+            }
+        });
+
+        // Fit map to show all markers
+        if (markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            window.routeMap.fitBounds(group.getBounds().pad(0.1));
+        }
+
+        // Add polyline connecting markers
+        if (markers.length > 1) {
+            const latlngs = markers.map(m => m.getLatLng());
+            L.polyline(latlngs, {color: '#c2410c', weight: 2, opacity: 0.7}).addTo(window.routeMap);
+        }
+    }, 100);
+
+    // Render route summary list
+    routeSummary.innerHTML = `
+        <div class="bg-white/90 rounded-2xl border border-stone-100 p-4">
+            <p class="text-sm font-semibold text-stone-700 mb-3">Rute Perjalanan</p>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-stone-600">
+                ${places.map((place, idx) => `<li><span class="font-medium">${escapeHtml(place)}</span></li>`).join('')}
+            </ol>
+        </div>
+    `;
+}
+
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(name) {
-    ['itinerary', 'budget', 'tips'].forEach(tab => {
+    ['itinerary', 'budget', 'tips', 'rute', 'aturan', 'kendaraan'].forEach(tab => {
         const el = document.getElementById(`tab-${tab}`);
         const btn = document.querySelector(`[data-tab="${tab}"]`);
         if (tab === name) {
@@ -611,6 +972,10 @@ function switchTab(name) {
             btn.classList.add('border-transparent', 'text-stone-400');
         }
     });
+
+     if (name === 'rute' && window.routeMap) {
+        setTimeout(() => window.routeMap.invalidateSize(), 100);
+    }
 }
 
 // ── Message helpers ───────────────────────────────────────────
