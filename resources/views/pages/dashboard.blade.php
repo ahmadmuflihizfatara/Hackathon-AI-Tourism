@@ -220,18 +220,6 @@
     </main>
 </div>
 
-{{-- ── Image Lightbox ── --}}
-<div id="img-lightbox" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center cursor-zoom-out transition-opacity duration-300" onclick="closeLightbox()">
-    <button onclick="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10">
-        <span class="material-icons-round text-white text-xl">close</span>
-    </button>
-    <div class="absolute bottom-4 left-0 right-0 text-center z-10">
-        <p id="lightbox-place" class="text-white font-heading font-semibold text-lg drop-shadow-lg"></p>
-        <p id="lightbox-caption" class="text-white/60 text-xs mt-1"></p>
-    </div>
-    <img id="lightbox-img" src="" alt="" class="max-w-[92vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-transform duration-300" onclick="event.stopPropagation()" />
-</div>
-
 {{-- ── Loading overlay ── --}}
 <div id="loading-overlay" class="hidden fixed inset-0 bg-warm-sand/80 backdrop-blur-sm z-50 flex items-center justify-center">
     <div class="bg-white rounded-2xl p-8 shadow-lg text-center max-w-xs w-full mx-4">
@@ -355,9 +343,6 @@ function renderItinerary(data) {
         itineraryTab.innerHTML += buildDayCard(day, i + 1);
     });
 
-    // Lazy-load destination images after DOM is painted
-    requestAnimationFrame(() => loadAllDestinationImages(data.schedule));
-
     // Render budget
     renderBudget(data.budget || []);
 
@@ -374,195 +359,45 @@ function renderItinerary(data) {
     renderMap(data);
 }
 
-// ── HD Image fetcher (multi-source) ──────────────────────────
+// ── SVG Illustration System ───────────────────────────────────
+// Menggantikan Unsplash/Pexels/Wikipedia dengan ilustrasi SVG lokal
+// berdasarkan kategori aktivitas. Konsisten, cepat, dan tidak bergantung API eksternal.
 
-// ── DB-First Image fetcher ────────────────────────────────────────────────────
-//
-// Alur baru:
-//   1. Batch-fetch semua nama tempat ke /api/destinations/images  (1 request)
-//   2. Jika DB punya gambar → pakai langsung (akurat, cepat)
-//   3. Jika tidak ada di DB  → fallback ke Wikipedia API (existing logic)
-//   4. Terakhir              → picsum placeholder
-
-const _imgCache   = {};   // thumb/display URL
-const _hdImgCache = {};   // full-res URL untuk lightbox
-
-// ── Batch-load images right after itinerary is rendered ──────────────────────
-async function loadAllDestinationImages(scheduleData) {
-    // Helper: ambil nama lokasi dari format baru (location) atau lama (place)
-    const getPlaceName = (act) => act.location || act.place || '';
-    // Kumpulkan semua nama tempat unik
-    const allPlaces = [];
-    (scheduleData || []).forEach(day => {
-        (day.activities || []).forEach(act => {
-            const placeName = act.location || act.place;
-            if (placeName && !allPlaces.includes(placeName)) {
-                allPlaces.push(placeName);
-            }
-        });
-    });
-
-    if (allPlaces.length === 0) return;
-
-    try {
-        // Satu request ke Laravel → dapat semua gambar DB sekaligus
-        const res = await fetch('/api/destinations/images', {
-            method : 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN' : document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify({ places: allPlaces }),
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            // Pre-populate cache dengan data DB
-            Object.entries(data.images || {}).forEach(([place, info]) => {
-                if (info.url) {
-                    _imgCache[place]   = info.url;
-                    _hdImgCache[place] = info.url;
-                }
-            });
-        }
-    } catch (e) {
-        // Tidak kritis — lanjut ke Wikipedia fallback
-        console.warn('[NusantaraAI] Batch image prefetch gagal:', e);
-    }
-
-    // Sekarang pasang gambar ke setiap <img> element
-    (scheduleData || []).forEach((day, dayIdx) => {
-        (day.activities || []).forEach((act, actIdx) => {
-            const id    = `act-img-${dayIdx + 1}-${actIdx}`;
-            const imgEl = document.getElementById(id);
-            const skEl  = document.getElementById(`${id}-sk`);
-            const wrapEl= document.getElementById(`${id}-wrapper`);
-            if (!imgEl || !wrapEl) return;
-
-            imgEl.addEventListener('load',  () => {
-                imgEl.classList.remove('opacity-0');
-                imgEl.classList.add('opacity-100');
-                skEl?.classList.add('hidden');
-            });
-            imgEl.addEventListener('error', () => {
-                wrapEl.classList.add('hidden');
-            });
-
-            _loadDestinationImage(act.location || act.place, imgEl, skEl, wrapEl);
-        });
-    });
+/**
+ * Kembalikan path SVG ilustrasi berdasarkan kategori aktivitas.
+ * File SVG disimpan di: public/images/activity-illustrations/{category}.svg
+ */
+function getIllustrationSrc(category) {
+    const validCategories = [
+        'transport', 'hotel', 'kuliner', 'pantai', 'alam', 'budaya', 'museum', 'belanja'
+    ];
+    const cat = (category || 'default').toLowerCase();
+    const key = validCategories.includes(cat) ? cat : 'default';
+    return `/images/activity-illustrations/${key}.jpg`;
 }
 
-// ── Per-image loader (DB cache → Wikipedia → Picsum) ─────────────────────────
-async function _loadDestinationImage(placeName, imgEl, skeletonEl, wrapperEl) {
-    const fallbackSrc = `https://picsum.photos/seed/${encodeURIComponent(placeName)}/1280/720`;
-
-    // Sudah ada di cache (dari DB atau sebelumnya)?
-    if (_imgCache[placeName] !== undefined) {
-        imgEl.src = _imgCache[placeName] || fallbackSrc;
-        return;
-    }
-
-    // Belum ada di DB cache → coba Wikipedia
-    const wikiDomain = '{{ env("WIKIMEDIA_API_DOMAIN", "wikipedia.org") }}';
-
-    const tryWikiPageImage = async (lang) => {
-        const q   = encodeURIComponent(placeName);
-        const url = `https://${lang}.${wikiDomain}/w/api.php?action=query&titles=${q}&prop=pageimages&format=json&pithumbsize=2000&origin=*`;
-        const res = await fetch(url);
-        const j   = await res.json();
-        const pg  = Object.values(j.query?.pages || {})[0];
-        return pg?.thumbnail?.source || null;
+/**
+ * Warna aksen latar ilustrasi per kategori (untuk fallback background)
+ */
+function getIllustrationAccent(category) {
+    const accents = {
+        'transport' : '#BFDBFE', // biru langit
+        'hotel'     : '#FEF3C7', // kuning hangat
+        'kuliner'   : '#FFEDD5', // oranye muda
+        'pantai'    : '#E0F2FE', // biru laut
+        'alam'      : '#DCFCE7', // hijau alam
+        'budaya'    : '#FEF3C7', // kuning budaya
+        'museum'    : '#EFF6FF', // biru museum
+        'belanja'   : '#F0FDF4', // hijau pasar
+        'default'   : '#DBEAFE', // biru default
     };
-
-    const tryWikimediaCommons = async () => {
-        const q   = encodeURIComponent(placeName + ' landmark');
-        const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${q}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=2000&format=json&origin=*`;
-        try {
-            const res   = await fetch(url);
-            const j     = await res.json();
-            const pages = Object.values(j.query?.pages || {});
-            for (const pg of pages) {
-                const thumbUrl = pg?.imageinfo?.[0]?.thumburl;
-                const origUrl  = pg?.imageinfo?.[0]?.url;
-                if (thumbUrl) return { thumb: thumbUrl, original: origUrl };
-            }
-        } catch { /* ignore */ }
-        return null;
-    };
-
-    try {
-        const wikiSrc = (await tryWikiPageImage('id')) || (await tryWikiPageImage('en'));
-        if (wikiSrc) {
-            _imgCache[placeName]   = wikiSrc;
-            _hdImgCache[placeName] = wikiSrc.replace(/\/thumb\//, '/').replace(/\/\d+px-[^/]+$/, '');
-            imgEl.src = wikiSrc;
-            return;
-        }
-
-        const commonsResult = await tryWikimediaCommons();
-        if (commonsResult) {
-            _imgCache[placeName]   = commonsResult.thumb;
-            _hdImgCache[placeName] = commonsResult.original || commonsResult.thumb;
-            imgEl.src = commonsResult.thumb;
-            return;
-        }
-
-        _imgCache[placeName] = fallbackSrc;
-        imgEl.src = fallbackSrc;
-    } catch {
-        _imgCache[placeName] = null;
-        imgEl.src = fallbackSrc;
-    }
+    const cat = (category || 'default').toLowerCase();
+    return accents[cat] || accents['default'];
 }
-
-// ── Lightbox ─────────────────────────────────────────────────
-function openLightbox(placeName) {
-    const lb = document.getElementById('img-lightbox');
-    const img = document.getElementById('lightbox-img');
-    const place = document.getElementById('lightbox-place');
-    const caption = document.getElementById('lightbox-caption');
-
-    place.textContent = placeName;
-
-    // Use HD cache if available, otherwise use the current image src
-    const hdSrc = _hdImgCache[placeName];
-    const imgEl = document.querySelector(`img[alt="${CSS.escape(placeName)}"]`);
-
-    const sourceLabels = {
-        'unsplash': '📷 Foto dari Unsplash',
-        'pexels'  : '📷 Foto dari Pexels',
-    };
-
-    if (hdSrc) {
-        img.src = hdSrc;
-        caption.textContent = '';
-    } else if (imgEl) {
-        img.src = imgEl.src;
-        caption.textContent = '';
-    }
-
-    lb.classList.remove('hidden');
-    lb.classList.add('flex');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeLightbox() {
-    const lb = document.getElementById('img-lightbox');
-    lb.classList.add('hidden');
-    lb.classList.remove('flex');
-    document.body.style.overflow = '';
-}
-
-// Close lightbox on Escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeLightbox();
-});
 
 function buildDayCard(day, dayNum) {
     const activities = (day.activities || []).map((act, idx) => {
         const isLast = idx === (day.activities.length - 1);
-        const actId  = `act-img-${dayNum}-${idx}`;
 
         // Dukungan dua format:
         // Format BARU: { action, location, ... }  → tampil dua baris
@@ -570,7 +405,6 @@ function buildDayCard(day, dayNum) {
         const hasActionLocation = act.action && act.location;
         const displayLocation   = hasActionLocation ? act.location : (act.place || '');
         const displayAction     = hasActionLocation ? act.action   : null;
-        const escapedPlace      = (act.location || act.place || '').replace(/'/g, "\\'");
 
         return `
         <div class="py-3 ${isLast ? '' : 'border-b border-stone-100'}">
@@ -594,27 +428,19 @@ function buildDayCard(day, dayNum) {
                         ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">${act.ticket}</span>` : ''}
                     </div>
                     ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
-                    <div id="${actId}-wrapper" class="ml-6 rounded-xl overflow-hidden border border-stone-100 bg-stone-50 relative cursor-pointer group" style="height:220px;" onclick="openLightbox('${escapedPlace}')">
-                        <img id="${actId}" alt="${displayLocation}"
-                             class="w-full h-full object-cover transition-all duration-500 opacity-0 group-hover:scale-105" loading="lazy" />
-                        <div id="${actId}-sk" class="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-                            <div class="w-9 h-9 bg-stone-200 rounded-xl animate-pulse flex items-center justify-center">
-                                <span class="material-icons-round text-stone-300 text-lg">photo_camera</span>
-                            </div>
-                            <p class="text-xs text-stone-300">Memuat foto HD…</p>
-                        </div>
-                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
+                    <div class="ml-6 rounded-xl overflow-hidden border border-stone-100 relative" style="height:200px;background:${getIllustrationAccent(act.category)};">
+                        <img
+                            src="${getIllustrationSrc(act.category)}"
+                            alt="Ilustrasi ${displayLocation}"
+                            class="w-full h-full object-cover"
+                            loading="lazy"
+                        />
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 via-black/15 to-transparent px-3 py-2.5 pointer-events-none">
                             ${displayAction
-                                ? `<p class="text-white/70 text-xs leading-tight">${displayAction}</p>
-                                   <p class="text-white text-sm font-medium truncate drop-shadow">${displayLocation}</p>`
-                                : `<p class="text-white text-sm font-medium truncate drop-shadow">${displayLocation}</p>`
+                                ? `<p class="text-white/80 text-xs leading-tight">${displayAction}</p>
+                                   <p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
+                                : `<p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
                             }
-                        </div>
-                        <div class="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                            <span class="text-white text-xs flex items-center gap-1">
-                                <span class="material-icons-round text-xs">zoom_in</span>
-                                HD
-                            </span>
                         </div>
                     </div>
                 </div>
