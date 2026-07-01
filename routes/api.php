@@ -1,24 +1,16 @@
 <?php
 
-use App\Http\Controllers\GeminiController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\GeminiController;
+use App\Http\Controllers\ItineraryController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes — NusantaraAI Tourism Planner
-|--------------------------------------------------------------------------
-*/
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
 
-// Gemini AI proxy — called by the frontend dashboard
-Route::post('/gemini', [GeminiController::class, 'chat'])->name('api.gemini');
+// NusantaraAI — Chat API
+Route::post('/gemini', [GeminiController::class, 'chat']);
 
-use App\Http\Controllers\MapController;
-
-Route::post('/route/optimize', [MapController::class, 'optimize']);
-Route::post('/route/directions', [MapController::class, 'directions']);
-
-use App\Http\Controllers\DestinationController;
-
-// Endpoint gambar destinasi (tanpa auth, bebas diakses frontend)
-Route::get('/destinations/image',   [DestinationController::class, 'getImage']);
-Route::post('/destinations/images', [DestinationController::class, 'getBatchImages']);
+// NusantaraAI — Itinerary API
+Route::post('/itinerary/generate', [ItineraryController::class, 'generate']);

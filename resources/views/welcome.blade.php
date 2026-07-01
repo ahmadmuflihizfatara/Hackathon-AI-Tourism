@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NusantaraAI — Smart Itinerary Planner</title>
 
-    @fonts
-
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endif
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-white text-stone-800 antialiased">
 
@@ -160,58 +156,8 @@
     </footer>
 
     <script>
-    // ============================================================
-    // SHADOW DATA — placeholder struktur respons AI API.
-    // Backend cukup mengembalikan JSON dengan bentuk yang sama
-    // (lihat fungsi generateItinerary di bawah untuk kontrak API).
-    // ============================================================
-    let itinerary = {
-        destinasi: "Nusa Penida, Bali",
-        aturan: {
-            regulasi: [
-                "Wisatawan wajib membayar retribusi masuk Rp25.000 di pos Tanjung Sanih",
-                "Snorkeling di area terumbu karang lindung hanya diizinkan dengan pemandu bersertifikat",
-                "Dilarang mengambil karang, kerang, atau biota laut sebagai suvenir"
-            ],
-            keselamatan: [
-                "Arus laut di Crystal Bay & Kelingking cukup kuat, hindari berenang di luar area bertanda",
-                "Jalur menuju Kelingking Beach curam dan licin saat hujan, gunakan alas kaki anti-slip",
-                "Sinyal seluler terbatas di beberapa titik, unduh peta offline sebelum berangkat"
-            ],
-            adat: [
-                "Kenakan kain sarung saat memasuki area pura, meski hanya untuk berfoto",
-                "Hindari mengambil foto upacara keagamaan tanpa izin warga setempat",
-                "Jangan menginjak sesajen (canang sari) yang diletakkan di jalan atau tanah"
-            ],
-            catatan_ai: "Musim kemarau (April–Oktober) lebih ramah untuk aktivitas snorkeling dan trekking di destinasi ini."
-        },
-        kendaraan: {
-            rekomendasi: [
-                {
-                    nama: "Motor Matic",
-                    skor: 5,
-                    cocok_untuk: ["Jalan sempit & berkelok", "Parkir terbatas", "Solo / berdua"],
-                    alasan: "Jalan di Nusa Penida sempit, berbukit, dan penuh tikungan tajam — motor matic paling lincah dan hemat bahan bakar untuk medan ini."
-                },
-                {
-                    nama: "Mobil Jeep 4x4",
-                    skor: 4,
-                    cocok_untuk: ["Rombongan 4–6 orang", "Jalan berbatu", "Musim hujan"],
-                    alasan: "Beberapa ruas jalan menuju spot tersembunyi masih berbatu dan belum beraspal rata, jeep 4x4 lebih stabil dan aman."
-                },
-                {
-                    nama: "Van / Minibus",
-                    skor: 2,
-                    cocok_untuk: ["Rombongan besar >8 orang", "Jalan utama beraspal"],
-                    alasan: "Ukuran van kurang ideal untuk jalan sempit pedesaan, hanya disarankan bila rute dibatasi pada jalan utama saja."
-                }
-            ]
-        }
-    };
+    let itinerary = {};
 
-    // ------------------------------------------------------------
-    // Icon set untuk kartu kendaraan (dicocokkan dari nama moda)
-    // ------------------------------------------------------------
     const iconMotor = `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="5" cy="17" r="2.6"/><circle cx="18" cy="17" r="2.6"/>
         <path d="M7.5 17h6l3-6h-3.5L11.5 8H7.5l-1.2 3.5"/>
@@ -248,9 +194,6 @@
         return `<div class="flex items-center gap-1">${dots}</div>`;
     }
 
-    // ------------------------------------------------------------
-    // Render: isi DOM dari objek `itinerary`
-    // ------------------------------------------------------------
     function renderAturan(data) {
         const bullet = (text) => `
             <li class="flex gap-2">
@@ -292,9 +235,6 @@
         renderKendaraan(data);
     }
 
-    // ------------------------------------------------------------
-    // Tab switching
-    // ------------------------------------------------------------
     const tabBtns = document.querySelectorAll('.tab-btn');
     const panels = { aturan: document.getElementById('panel-aturan'), kendaraan: document.getElementById('panel-kendaraan') };
 
@@ -311,13 +251,6 @@
 
     tabBtns.forEach(btn => btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
 
-    // ------------------------------------------------------------
-    // Generate button — ganti isi fungsi ini dengan pemanggilan
-    // AI API sungguhan saat integrasi backend sudah siap.
-    // Kontrak yang diharapkan:
-    //   POST /api/itinerary/generate  { destinasi: string }
-    //   -> response JSON dengan bentuk sama seperti objek `itinerary`
-    // ------------------------------------------------------------
     async function generateItinerary(destinasi) {
         const loading = document.getElementById('loading-indicator');
         const btn = document.getElementById('btn-generate');
@@ -327,19 +260,16 @@
         btn.classList.add('opacity-60', 'cursor-not-allowed');
 
         try {
-            // --- Placeholder: simulasi delay AI, ganti dengan fetch() asli ---
-            // const res = await fetch('/api/itinerary/generate', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({ destinasi })
-            // });
-            // const data = await res.json();
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const data = { ...itinerary, destinasi };
-            // ------------------------------------------------------------
-
+            const res = await fetch('/api/itinerary/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ destinasi })
+            });
+            const data = await res.json();
             renderAll(data);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Gagal membuat rencana. Cek konsol untuk detail error.');
         } finally {
             loading.classList.add('hidden');
             loading.classList.remove('flex');
@@ -353,9 +283,7 @@
         if (destinasi) generateItinerary(destinasi);
     });
 
-    // Init
     setActiveTab('aturan');
-    renderAll(itinerary);
     </script>
 </body>
 </html>

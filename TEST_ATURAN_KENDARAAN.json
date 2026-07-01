@@ -1,0 +1,162 @@
+{
+  "_comment": "Contoh payload itinerary dengan data ATURAN dan KENDARAAN untuk testing komponen UI tab-aturan dan tab-kendaraan",
+  
+  "destination": "Yogyakarta",
+  "province": "Daerah Istimewa Yogyakarta",
+  "days": 3,
+  "total_budget": "Rp 3.500.000",
+  "total_places": 8,
+  
+  "aturan": [
+    {
+      "place": "Candi Borobudur",
+      "category": "cagar budaya",
+      "rules": [
+        { "text": "Dilarang memanjat struktur candi yang berusia 1200 tahun — keamanan dan preservasi dijaga ketat", "type": "larangan" },
+        { "text": "Wajib mengenakan alas kaki untuk melindungi lantai batu bersejarah dari goresan", "type": "wajib" },
+        { "text": "Sebaiknya datang sebelum jam 09.00 untuk menghindari keramaian dan panas terik", "type": "anjuran" },
+        { "text": "Membawa tas cadangan untuk kamera — pundak borobudur berbatu tidak rata", "type": "anjuran" }
+      ],
+      "source_note": "Per Peraturan Taman Budaya Borobudur dan UNESCO World Heritage Site Guidelines"
+    },
+    {
+      "place": "Desa Adat Kasongan",
+      "category": "desa adat",
+      "rules": [
+        { "text": "Menghormati privasi rumah warga — jangan masuk ke halaman rumah tanpa izin", "type": "wajib" },
+        { "text": "Dilarang memotret warga tanpa persetujuan — tanyakan terlebih dahulu", "type": "larangan" },
+        { "text": "Gunakan pakaian yang sopan dan tertutup — ini adalah daerah yang menjunjung tinggi norma adat", "type": "anjuran" },
+        { "text": "Dukung ekonomi lokal dengan membeli keramik langsung dari pengrajin, bukan melalui reseller", "type": "anjuran" }
+      ],
+      "source_note": "Kebijakan Pengelola Desa Wisata Kasongan & Adat Istiadat Setempat"
+    },
+    {
+      "place": "Taman Nasional Gunung Merapi",
+      "category": "konservasi",
+      "rules": [
+        { "text": "Pendakian hanya diizinkan dengan pemandu resmi yang bersertifikat", "type": "wajib" },
+        { "text": "Dilarang meninggalkan sampah — bawa kembali semua perlengkapan dan limbah organik", "type": "larangan" },
+        { "text": "Dengarkan briefing keselamatan dari ranger sebelum memulai pendakian", "type": "wajib" },
+        { "text": "⚠️ Peringatan: Kondisi cuaca dapat berubah drastis — siapkan jaket dan perlengkapan darurat", "type": "peringatan" }
+      ],
+      "source_note": "Per Balai Taman Nasional Gunung Merapi & Kementerian Lingkungan Hidup"
+    }
+  ],
+
+  "kendaraan": [
+    {
+      "segment": "Dari Airport YIA ke Hotel (Pusat Kota)",
+      "vehicle_type": "mobil pribadi",
+      "reason": "Perjalanan ~45 km dengan rute highway yang nyaman. Mobil rental lebih praktis untuk mobilitas selama 3 hari tanpa repot order ojol berkali-kali. Harga sewa kompetitif di Yogyakarta.",
+      "road_condition": "akses mudah",
+      "public_transport": {
+        "available": true,
+        "options": [
+          { "name": "Bus DAMRI Resmi", "icon": "directions_bus", "price_min": 25000, "price_max": 40000, "duration": "1 jam", "note": "Jadwal teratur, setop di terminal Jombor" },
+          { "name": "Taksi Khusus Bandara (Booking Online)", "icon": "local_taxi", "price_min": 70000, "price_max": 120000, "duration": "45 menit", "note": "Lebih nyaman, harga tetap tanpa naik turun" },
+          { "name": "Grab / Gojek", "icon": "directions_car", "price_min": 80000, "price_max": 150000, "duration": "50 menit", "note": "Real-time tracking, tapi harga surge di peak hour" }
+        ]
+      }
+    },
+    {
+      "segment": "Dari Hotel ke Candi Borobudur & Mendut",
+      "vehicle_type": "motor",
+      "reason": "Jarak hanya 42 km dari pusat kota, motor atau mobil sama-sama cocok. Motor lebih hemat biaya & BBM, cocok untuk rombongan kecil. Jalanan jelas menuju kompleks candi.",
+      "road_condition": "akses sedang",
+      "public_transport": {
+        "available": true,
+        "options": [
+          { "name": "Tour Bus Lokal Borobudur", "icon": "directions_bus", "price_min": 50000, "price_max": 100000, "duration": "1.5 jam", "note": "Termasuk guide & tiket masuk candi (harga kombo)" },
+          { "name": "Sewa Motor Lokal", "icon": "two_wheeler", "price_min": 60000, "price_max": 90000, "duration": "1 jam", "note": "Tarif per hari, lebih fleksibel. Kabutkan helm & asuransi" },
+          { "name": "Mobil Rental Harian", "icon": "directions_car", "price_min": 150000, "price_max": 300000, "duration": "45 min", "note": "Mobil + sopir atau lepas sopir. Satu mobil bisa 4 orang" }
+        ]
+      }
+    },
+    {
+      "segment": "Dari Pusat Kota ke Desa Kasongan (Kerajinan Tembikar)",
+      "vehicle_type": "motor",
+      "reason": "Jarak ~15 km, jalanan lokal yang ramai namun aman. Motor sangat fleksibel untuk gang-gang sempit di desa dan parkir mudah di rumah pengrajin. Biaya terjangkau.",
+      "road_condition": "akses mudah",
+      "public_transport": {
+        "available": true,
+        "options": [
+          { "name": "Angkot / Bemo Lokal Rute Kasongan", "icon": "directions_bus", "price_min": 5000, "price_max": 15000, "duration": "45 min", "note": "Terima pembayaran bersama, hanya ada saat jam operasional pagi-sore" },
+          { "name": "Ojek Online (Grab/Gojek)", "icon": "two_wheeler", "price_min": 20000, "price_max": 45000, "duration": "25 min", "note": "Sopir tahu jalan, aman untuk wisatawan asing" },
+          { "name": "Sewa Motor Harian", "icon": "two_wheeler", "price_min": 60000, "price_max": 90000, "duration": "25 min", "note": "Lebih hemat kalau dipakai seharian untuk beberapa tempat" }
+        ]
+      }
+    }
+  ],
+
+  "schedule": [
+    {
+      "day": 1,
+      "title": "Kedatangan & Eksplorasi Pusat Kota",
+      "activities": [
+        {
+          "time": "08.00",
+          "action": "Tiba di",
+          "location": "Airport Yogyakarta International (YIA)",
+          "category": "transport",
+          "description": "Terminal baru modern 20 km dari kota. Check-in dan perjalanan ke hotel.",
+          "harga_min": 0,
+          "harga_max": 0,
+          "wna_price": null
+        },
+        {
+          "time": "10.00",
+          "action": "Check-in",
+          "location": "Hotel di Malioboro / Pusat Kota",
+          "category": "hotel",
+          "description": "Istirahat sejenak, persiapan untuk penjelajahan kota.",
+          "harga_min": 300000,
+          "harga_max": 600000,
+          "wna_price": null
+        },
+        {
+          "time": "13.00",
+          "action": "Makan Siang",
+          "location": "Gudeg Biro Yogyakarta",
+          "category": "kuliner",
+          "description": "Coba hidangan khas Yogyakarta: gudeg, ayam goreng, telur, dan sambal krecek. Authentic & terjangkau.",
+          "harga_min": 35000,
+          "harga_max": 60000,
+          "wna_price": null
+        },
+        {
+          "time": "15.00",
+          "action": "Jelajahi",
+          "location": "Jalan Malioboro",
+          "category": "belanja",
+          "description": "Jalan legendaris dengan toko souvenir, batik, kerajinan. Ideal untuk belanja oleh-oleh dan street photography.",
+          "harga_min": 0,
+          "harga_max": 0,
+          "wna_price": null
+        }
+      ]
+    }
+  ],
+
+  "budget": [
+    { "category": "akomodasi", "label": "Hotel (3 malam)", "amount": 1200000, "per": "Rp 400.000 × 3", "note": "Hotel bintang 2-3 di pusat kota" },
+    { "category": "makan", "label": "Makan & Minum", "amount": 600000, "per": "Rp 200.000/hari × 3" },
+    { "category": "transport", "label": "Transportasi Lokal", "amount": 600000, "per": "Motor sewa atau Ojek", "note": "Estimasi total perjalanan antar lokasi" },
+    { "category": "tiket", "label": "Tiket Wisata", "amount": 800000, "per": "Borobudur + Mendut + Gunung Merapi", "note": "Rata-rata Rp 150-250k per tempat" },
+    { "category": "lainnya", "label": "Oleh-oleh & Asuransi", "amount": 300000, "per": "Batik, keramik, asuransi perjalanan" }
+  ],
+
+  "tips": [
+    {
+      "title": "Waktu Terbaik Candi",
+      "content": "Datang ke Borobudur sebelum jam 08.30 untuk menghindari keramaian turis dan suhu terik siang hari. Sunrise di candi juga spektakuler!"
+    },
+    {
+      "title": "Transportasi Efisien",
+      "content": "Sewa motor harian (Rp 60-90k) lebih hemat dibanding ojek berkali-kali. Pakai helm, asuransi, dan ikuti lalu lintas setempat."
+    },
+    {
+      "title": "Kuliner Wajib",
+      "content": "Jangan lewatkan: Gudeg Khas Yogyakarta, Soto Ayam Kedai 1945, Batagor Rombas, dan Wedang Ronde di malam hari."
+    }
+  ]
+}

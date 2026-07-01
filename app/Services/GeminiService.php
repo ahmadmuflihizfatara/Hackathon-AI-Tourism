@@ -285,6 +285,72 @@ Contoh yang BENAR:
 - "action": "Check-out",      "location": "Hotel / Penginapan"
 - "action": "Makan Malam",    "location": "Warung Sate Pak Budi"
 
+FORMAT TAB ATURAN DAN KENDARAAN (OPSIONAL, KHUSUS ITINERARY):
+Tambahkan kedua field berikut DALAM JSON itinerary:
+
+FIELD 1: "aturan" (array of objects)
+Format setiap item:
+{
+  "place": "Nama Tempat Wisata",
+  "category": "religi|pantai|gunung|konservasi|cagar budaya|desa adat|air terjun|taman nasional|default",
+  "rules": [
+    { "text": "Deskripsi aturan 1", "type": "wajib|larangan|anjuran|peringatan" },
+    { "text": "Deskripsi aturan 2", "type": "anjuran" }
+  ],
+  "source_note": "(Opsional) Sumber kebijakan atau catatan tambahan"
+}
+
+Contoh yang BENAR:
+{
+  "place": "Candi Borobudur",
+  "category": "cagar budaya",
+  "rules": [
+    { "text": "Dilarang memanjat struktur candi yang berusia ribuan tahun", "type": "larangan" },
+    { "text": "Harus mengenakan alas kaki untuk menjaga kelestarian batu", "type": "wajib" },
+    { "text": "Sebaiknya datang pagi hari sebelum jam 09.00 untuk menghindari keramaian", "type": "anjuran" }
+  ],
+  "source_note": "Per Peraturan Taman Budaya Borobudur 2023"
+}
+
+FIELD 2: "kendaraan" (array of objects)
+Format setiap item:
+{
+  "segment": "Deskripsi rute atau aktivitas perjalanan",
+  "vehicle_type": "motor|mobil pribadi|kendaraan umum|kapal/perahu|jalan kaki",
+  "reason": "Penjelasan mengapa kendaraan ini direkomendasikan",
+  "road_condition": "akses mudah|akses sedang|akses terbatas",
+  "public_transport": {
+    "available": true|false,
+    "options": [
+      { "name": "Nama Moda", "icon": "directions_bus", "price_min": 25000, "price_max": 50000, "duration": "1 jam", "note": "Catatan" },
+      { "name": "Ojek Online", "icon": "two_wheeler", "price_min": 15000, "price_max": 35000, "duration": "30 min", "note": null }
+    ]
+  }
+}
+
+Contoh yang BENAR:
+{
+  "segment": "Dari hotel ke Candi Borobudur",
+  "vehicle_type": "motor",
+  "reason": "Motor lebih fleksibel untuk melewati jalanan kecil menuju parkir wisatawan candi. Lebih hemat waktu dan biaya dibanding mobil.",
+  "road_condition": "akses sedang",
+  "public_transport": {
+    "available": true,
+    "options": [
+      { "name": "Tour Bus Lokal", "icon": "directions_bus", "price_min": 50000, "price_max": 100000, "duration": "2 jam", "note": "Termasuk guide lokal berbahasa Indonesia" },
+      { "name": "Ojek Motor", "icon": "two_wheeler", "price_min": 30000, "price_max": 50000, "duration": "45 min", "note": "Negosiasi harga sebelum berangkat" }
+    ]
+  }
+}
+
+INSTRUKSI PENULISAN ATURAN DAN KENDARAAN:
+1. Field "aturan": Tambahkan 2-4 item untuk destinasi utama yang memiliki regulasi khusus (candi, pantai konservasi, desa adat, dll)
+2. Field "kendaraan": Tambahkan 1-3 item untuk segmen perjalanan yang membutuhkan pertimbangan khusus (antar kota, akses sulit, dll)
+3. Jika tidak ada aturan khusus atau transportasi khusus, biarkan kedua field KOSONG ([] atau tidak perlu disertakan)
+4. PASTIKAN tipe data benar: "type" hanya boleh "wajib", "larangan", "anjuran", atau "peringatan"
+5. PASTIKAN "category" untuk aturan sesuai daftar yang diberikan
+6. PASTIKAN "vehicle_type" untuk kendaraan sesuai daftar yang diberikan
+
 BAHASA: Selalu gunakan Bahasa Indonesia yang ramah, hangat, dan antusias.
 PROMPT;
     }

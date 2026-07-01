@@ -610,57 +610,70 @@ function renderTips(tips) {
 // Format item: { place, category, rules: [string,...], severity: 'wajib'|'larangan'|'anjuran', source_note }
 function renderAturan(rules) {
     const container = document.getElementById('aturan-content');
-    if (!rules.length) {
-        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Aturan tempat wisata akan tersedia setelah itinerary dibuat.</p>';
+    if (!rules || rules.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 px-4">
+                <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mb-3">
+                    <span class="material-icons-round text-stone-300 text-3xl">gavel</span>
+                </div>
+                <p class="text-stone-400 text-sm text-center">Aturan tempat wisata akan tersedia setelah itinerary dibuat.</p>
+            </div>`;
         return;
     }
 
     const intro = `
-        <div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-2 flex items-start gap-2.5">
-            <span class="material-icons-round text-amber-500 text-base mt-0.5">info</span>
-            <p class="text-xs text-amber-700 leading-relaxed">
-                Aturan berikut disusun berdasarkan kebijakan umum yang berlaku saat ini (kearifan lokal, regulasi kawasan konservasi/cagar budaya, dan protokol keselamatan). Selalu cek papan informasi atau petugas di lokasi karena kebijakan bisa berubah sewaktu-waktu.
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-xl px-4 py-3 mb-3 flex items-start gap-2.5 shadow-sm">
+            <span class="material-icons-round text-amber-500 text-base mt-0.5 flex-shrink-0">info</span>
+            <p class="text-xs text-amber-800 leading-relaxed">
+                <strong>Penting:</strong> Aturan berikut didasarkan pada kearifan lokal, regulasi konservasi, dan protokol keselamatan. Selalu tanyakan ke petugas setempat karena kebijakan dapat berubah.
             </p>
         </div>`;
 
-    container.innerHTML = intro + rules.map(item => {
+    container.innerHTML = intro + rules.map((item, idx) => {
         const placeName = item.place || item.location || '';
         const rulesList = item.rules || (Array.isArray(item.items) ? item.items : []);
+        const hasRules = rulesList && rulesList.length > 0;
+        
         return `
-        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden">
-            <div class="flex items-center gap-2.5 px-5 py-3 bg-stone-50 border-b border-stone-100">
-                <div class="w-8 h-8 bg-terracotta/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span class="material-icons-round text-terracotta text-base">${getAturanIcon(item.category)}</span>
+        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-stone-50 to-white border-b border-stone-100">
+                <div class="w-10 h-10 ${getAturanBgColor(item.category)} rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <span class="material-icons-round text-base ${getAturanIconColor(item.category)}">${getAturanIcon(item.category)}</span>
                 </div>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-stone-700 truncate">${placeName}</p>
-                    ${item.category ? `<p class="text-xs text-stone-400">${item.category}</p>` : ''}
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold text-stone-800">${placeName || 'Tempat Wisata'}</p>
+                    ${item.category ? `<p class="text-xs text-stone-400 capitalize">${item.category}</p>` : ''}
                 </div>
+                ${hasRules ? `<span class="text-xs font-medium px-2.5 py-1 bg-stone-100 text-stone-600 rounded-full">${rulesList.length} aturan</span>` : ''}
             </div>
-            <ul class="px-5 py-3 space-y-2.5">
+            ${hasRules ? `
+            <ul class="px-4 py-3 space-y-2.5">
                 ${rulesList.map(r => renderAturanLine(r)).join('')}
-            </ul>
-            ${item.source_note ? `<p class="px-5 pb-3 text-xs text-stone-300 leading-relaxed">${item.source_note}</p>` : ''}
+            </ul>` : `<div class="px-4 py-3"><p class="text-sm text-stone-400 italic">Tidak ada aturan khusus terdaftar untuk lokasi ini.</p></div>`}
+            ${item.source_note ? `<p class="px-4 pb-2.5 text-xs text-stone-300 leading-relaxed border-t border-stone-50">📌 ${item.source_note}</p>` : ''}
         </div>`;
     }).join('');
 }
 
 function renderAturanLine(r) {
-    // r bisa string sederhana, atau object { text, type: 'wajib'|'larangan'|'anjuran' }
     const text = typeof r === 'string' ? r : (r.text || '');
     const type = typeof r === 'string' ? 'anjuran' : (r.type || 'anjuran');
-    const badge = {
-        wajib:    { label: 'Wajib',    cls: 'bg-blue-50 text-blue-600',    icon: 'check_circle' },
-        larangan: { label: 'Larangan', cls: 'bg-rose-50 text-rose-600',    icon: 'block' },
-        anjuran:  { label: 'Anjuran',  cls: 'bg-emerald/10 text-emerald-dark', icon: 'tips_and_updates' },
-    }[type] || { label: 'Info', cls: 'bg-stone-100 text-stone-500', icon: 'info' };
+    
+    const badges = {
+        wajib:    { label: 'Wajib',    cls: 'bg-blue-50 text-blue-700 border border-blue-100',    icon: 'check_circle' },
+        larangan: { label: 'Larangan', cls: 'bg-rose-50 text-rose-700 border border-rose-100',    icon: 'cancel' },
+        anjuran:  { label: 'Anjuran',  cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100', icon: 'lightbulb' },
+        peringatan: { label: 'Peringatan', cls: 'bg-amber-50 text-amber-700 border border-amber-100', icon: 'warning' }
+    }[type] || { label: 'Info', cls: 'bg-stone-100 text-stone-600 border border-stone-200', icon: 'info' };
 
     return `
-        <li class="flex items-start gap-2.5">
-            <span class="material-icons-round text-sm mt-0.5 flex-shrink-0 ${badge.cls.split(' ')[1]}">${badge.icon}</span>
-            <div class="min-w-0">
-                <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${badge.cls} mr-1.5">${badge.label}</span>
-                <span class="text-sm text-stone-600 leading-relaxed">${text}</span>
+        <li class="flex items-start gap-2.5 group">
+            <div class="flex-shrink-0 mt-0.5">
+                <span class="material-icons-round text-base group-hover:scale-110 transition-transform ${badges.cls.split(' ')[1]}">${badges.icon}</span>
+            </div>
+            <div class="min-w-0 flex-1">
+                <span class="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${badges.cls} inline-block">${badges.label}</span>
+                <p class="text-sm text-stone-700 leading-relaxed mt-1">${escapeHtml(text)}</p>
             </div>
         </li>`;
 }
@@ -670,9 +683,30 @@ function getAturanIcon(category) {
         'religi': 'temple_hindu', 'religius': 'temple_hindu', 'pantai': 'beach_access',
         'gunung': 'landscape', 'konservasi': 'eco', 'cagar budaya': 'museum',
         'taman nasional': 'park', 'air terjun': 'water_drop', 'desa adat': 'holiday_village',
+        'air panas': 'local_fire_department', 'gua': 'public', 'kebun': 'agriculture',
         'default': 'gavel'
     };
     return icons[category?.toLowerCase()] || icons.default;
+}
+
+function getAturanBgColor(category) {
+    const colors = {
+        'religi': 'bg-yellow-100', 'religius': 'bg-yellow-100', 'pantai': 'bg-cyan-100',
+        'gunung': 'bg-green-100', 'konservasi': 'bg-emerald-100', 'cagar budaya': 'bg-purple-100',
+        'taman nasional': 'bg-teal-100', 'air terjun': 'bg-blue-100', 'desa adat': 'bg-amber-100',
+        'default': 'bg-stone-100'
+    };
+    return colors[category?.toLowerCase()] || colors.default;
+}
+
+function getAturanIconColor(category) {
+    const colors = {
+        'religi': 'text-yellow-600', 'religius': 'text-yellow-600', 'pantai': 'text-cyan-600',
+        'gunung': 'text-green-600', 'konservasi': 'text-emerald-600', 'cagar budaya': 'text-purple-600',
+        'taman nasional': 'text-teal-600', 'air terjun': 'text-blue-600', 'desa adat': 'text-amber-600',
+        'default': 'text-stone-500'
+    };
+    return colors[category?.toLowerCase()] || colors.default;
 }
 
 // ── Render Rekomendasi Kendaraan ──────────────────────────────
@@ -680,61 +714,83 @@ function getAturanIcon(category) {
 //                public_transport: { available, options: [{name, price_min, price_max, note}] } }
 function renderKendaraan(items) {
     const container = document.getElementById('kendaraan-content');
-    if (!items.length) {
-        container.innerHTML = '<p class="text-stone-400 text-sm text-center py-8">Rekomendasi kendaraan akan tersedia setelah itinerary dibuat.</p>';
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 px-4">
+                <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mb-3">
+                    <span class="material-icons-round text-stone-300 text-3xl">directions_car</span>
+                </div>
+                <p class="text-stone-400 text-sm text-center">Rekomendasi kendaraan akan tersedia setelah itinerary dibuat.</p>
+            </div>`;
         return;
     }
 
     const intro = `
-        <div class="bg-emerald/10 border border-emerald/20 rounded-xl px-4 py-3 mb-2 flex items-start gap-2.5">
-            <span class="material-icons-round text-emerald-dark text-base mt-0.5">directions_car</span>
-            <p class="text-xs text-emerald-dark leading-relaxed">
-                Rekomendasi disesuaikan dengan kondisi akses jalan di tiap lokasi. Beberapa daerah (jalur pegunungan, desa terpencil, gang sempit di kawasan wisata padat) lebih cocok diakses dengan motor atau kendaraan umum lokal dibanding mobil pribadi.
+        <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl px-4 py-3 mb-3 flex items-start gap-2.5 shadow-sm">
+            <span class="material-icons-round text-emerald-600 text-base mt-0.5 flex-shrink-0">info</span>
+            <p class="text-xs text-emerald-900 leading-relaxed">
+                <strong>Tips:</strong> Pilih kendaraan berdasarkan kondisi jalan dan durasi perjalanan. Motor lebih fleksibel untuk jalan sempit, mobil lebih nyaman untuk perjalanan jauh.
             </p>
         </div>`;
 
-    container.innerHTML = intro + items.map(item => {
+    container.innerHTML = intro + items.map((item, idx) => {
         const vehicleBadge = getVehicleBadge(item.vehicle_type);
         const pt = item.public_transport || {};
         const hasPT = pt.available !== false && (pt.options || []).length > 0;
-
+        const roadBadge = getRoadBadge(item.road_condition);
+        
         return `
-        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden">
-            <div class="flex items-center justify-between gap-2 px-5 py-3 bg-stone-50 border-b border-stone-100">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-8 h-8 ${vehicleBadge.bg} rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span class="material-icons-round ${vehicleBadge.text} text-base">${vehicleBadge.icon}</span>
+        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-stone-50 to-white border-b border-stone-100">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-10 h-10 ${vehicleBadge.bgColor} rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <span class="material-icons-round ${vehicleBadge.textColor} text-base">${vehicleBadge.icon}</span>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-stone-700 truncate">${item.segment || item.route || ''}</p>
+                        <p class="text-sm font-semibold text-stone-800 truncate">${item.segment || item.route || 'Perjalanan'}</p>
                         <p class="text-xs text-stone-400">${vehicleBadge.label}</p>
                     </div>
                 </div>
-                ${item.road_condition ? `<span class="text-[10px] font-medium px-2 py-1 rounded-full ${getRoadBadge(item.road_condition).cls} whitespace-nowrap flex-shrink-0">${getRoadBadge(item.road_condition).label}</span>` : ''}
+                ${item.road_condition ? `<span class="text-xs font-medium px-2.5 py-1 ${roadBadge.cls} rounded-full whitespace-nowrap flex-shrink-0">${roadBadge.label}</span>` : ''}
             </div>
-            <div class="px-5 py-3 space-y-3">
-                ${item.reason ? `<p class="text-sm text-stone-600 leading-relaxed">${item.reason}</p>` : ''}
+            
+            <div class="px-4 py-3 space-y-3">
+                ${item.reason ? `
+                <div class="flex items-start gap-2">
+                    <span class="material-icons-round text-stone-400 text-sm mt-0.5 flex-shrink-0">lightbulb</span>
+                    <p class="text-sm text-stone-600 leading-relaxed">${item.reason}</p>
+                </div>` : ''}
 
                 ${hasPT ? `
-                <div class="bg-stone-50 rounded-lg px-4 py-3">
-                    <p class="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Opsi Kendaraan Umum / Sewa</p>
+                <div class="bg-gradient-to-br from-stone-50 to-stone-25 rounded-lg px-3.5 py-2.5 border border-stone-100">
+                    <p class="text-xs font-bold text-stone-600 uppercase tracking-wider mb-2.5 flex items-center gap-1">
+                        <span class="material-icons-round text-sm text-stone-400">directions_bus</span>
+                        Opsi Transportasi Umum / Sewa
+                    </p>
                     <div class="space-y-2">
                         ${pt.options.map(o => `
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm text-stone-600 flex items-center gap-1.5">
-                                    <span class="material-icons-round text-stone-400 text-sm">${o.icon || 'directions_bus'}</span>
-                                    ${o.name}
-                                </span>
+                            <div class="flex items-start justify-between gap-3 bg-white rounded-lg px-3 py-2 border border-stone-50">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm text-stone-700 font-medium flex items-center gap-1.5">
+                                        <span class="material-icons-round text-stone-400 text-sm">${o.icon || 'directions_bus'}</span>
+                                        ${o.name}
+                                    </p>
+                                    ${o.duration ? `<p class="text-xs text-stone-400 mt-0.5">⏱ ${o.duration}</p>` : ''}
+                                    ${o.note ? `<p class="text-xs text-stone-400 mt-0.5">💡 ${o.note}</p>` : ''}
+                                </div>
                                 <div class="text-right flex-shrink-0">
-                                    <p class="text-sm font-semibold text-stone-700">${formatPriceRange(o.price_min, o.price_max)}</p>
-                                    ${o.note ? `<p class="text-xs text-stone-400">${o.note}</p>` : ''}
+                                    <p class="text-sm font-semibold text-stone-800">${formatPriceRange(o.price_min, o.price_max)}</p>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                </div>` : (item.vehicle_type?.toLowerCase().includes('pribadi') ? '' : `
-                <p class="text-xs text-stone-400 italic">Kendaraan umum belum tersedia langsung ke lokasi ini — disarankan sewa kendaraan pribadi atau jasa ojek lokal.</p>
-                `)}
+                </div>` : `
+                <div class="bg-amber-50 border border-amber-100 rounded-lg px-3.5 py-2.5">
+                    <p class="text-xs text-amber-800 flex items-center gap-1.5">
+                        <span class="material-icons-round text-amber-600 text-sm">warning</span>
+                        Kendaraan umum tidak langsung ke lokasi ini — disarankan sewa kendaraan pribadi atau jasa ojek lokal.
+                    </p>
+                </div>`}
             </div>
         </div>`;
     }).join('');
@@ -742,23 +798,53 @@ function renderKendaraan(items) {
 
 function getVehicleBadge(type) {
     const t = (type || '').toLowerCase();
-    if (t.includes('motor')) return { icon: 'two_wheeler', label: 'Motor', bg: 'bg-amber-50', text: 'text-amber-500' };
-    if (t.includes('mobil') || t.includes('pribadi')) return { icon: 'directions_car', label: 'Mobil Pribadi / Sewa', bg: 'bg-blue-50', text: 'text-blue-600' };
-    if (t.includes('umum') || t.includes('bus') || t.includes('angkot')) return { icon: 'directions_bus', label: 'Kendaraan Umum', bg: 'bg-emerald/10', text: 'text-emerald-dark' };
-    if (t.includes('kapal') || t.includes('perahu') || t.includes('boat')) return { icon: 'directions_boat', label: 'Kapal / Perahu', bg: 'bg-cyan-50', text: 'text-cyan-600' };
-    if (t.includes('jalan') || t.includes('kaki')) return { icon: 'directions_walk', label: 'Jalan Kaki', bg: 'bg-stone-100', text: 'text-stone-500' };
-    return { icon: 'directions_car', label: type || 'Kendaraan', bg: 'bg-stone-100', text: 'text-stone-500' };
+    if (t.includes('motor')) return { 
+        icon: 'two_wheeler', 
+        label: 'Motor / Sepeda',  
+        bgColor: 'bg-amber-100', 
+        textColor: 'text-amber-600' 
+    };
+    if (t.includes('mobil') || t.includes('pribadi')) return { 
+        icon: 'directions_car',  
+        label: 'Mobil Pribadi / Sewa', 
+        bgColor: 'bg-blue-100',   
+        textColor: 'text-blue-600' 
+    };
+    if (t.includes('umum') || t.includes('bus') || t.includes('angkot')) return { 
+        icon: 'directions_bus',   
+        label: 'Kendaraan Umum',   
+        bgColor: 'bg-emerald-100',
+        textColor: 'text-emerald-600' 
+    };
+    if (t.includes('kapal') || t.includes('perahu') || t.includes('boat')) return { 
+        icon: 'directions_boat',  
+        label: 'Kapal / Perahu',   
+        bgColor: 'bg-cyan-100',   
+        textColor: 'text-cyan-600' 
+    };
+    if (t.includes('jalan') || t.includes('kaki')) return { 
+        icon: 'directions_walk',  
+        label: 'Jalan Kaki',       
+        bgColor: 'bg-stone-100',  
+        textColor: 'text-stone-500' 
+    };
+    return { 
+        icon: 'directions_car', 
+        label: type || 'Kendaraan', 
+        bgColor: 'bg-stone-100', 
+        textColor: 'text-stone-500' 
+    };
 }
 
 function getRoadBadge(condition) {
     const c = (condition || '').toLowerCase();
     if (c.includes('rusak') || c.includes('terbatas') || c.includes('sulit') || c.includes('sempit')) {
-        return { label: 'Akses Terbatas', cls: 'bg-rose-50 text-rose-600' };
+        return { label: '⚠ Akses Terbatas', cls: 'bg-rose-50 text-rose-700 border border-rose-100' };
     }
     if (c.includes('sedang') || c.includes('cukup')) {
-        return { label: 'Akses Sedang', cls: 'bg-amber-50 text-amber-600' };
+        return { label: '◐ Akses Sedang', cls: 'bg-amber-50 text-amber-700 border border-amber-100' };
     }
-    return { label: 'Akses Mudah', cls: 'bg-emerald/10 text-emerald-dark' };
+    return { label: '✓ Akses Mudah', cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100' };
 }
 
 function formatPriceRange(min, max) {
