@@ -425,7 +425,7 @@ function buildDayCard(day, dayNum) {
                                 }
                             </div>
                         </div>
-                        ${act.ticket ? `<span class="text-xs bg-emerald/10 text-emerald-dark px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">${act.ticket}</span>` : ''}
+                        ${buildPriceBadge(act)}
                     </div>
                     ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
                     <div class="ml-6 rounded-xl overflow-hidden border border-stone-100 relative" style="height:200px;background:${getIllustrationAccent(act.category)};">
@@ -460,7 +460,19 @@ function buildDayCard(day, dayNum) {
                         ${day.title ? `<p class="text-xs text-stone-400">${day.title}</p>` : ''}
                     </div>
                 </div>
-                <span class="text-xs text-stone-400">${day.activities?.length || 0} aktivitas</span>
+                <div class="text-right">
+                ${(() => {
+                    const acts = day.activities || [];
+                    const totalMin = acts.reduce((s, a) => s + (parseInt(a.harga_min) || 0), 0);
+                    const totalMax = acts.reduce((s, a) => s + (parseInt(a.harga_max) || 0), 0);
+                    const fmt = (n) => 'Rp ' + n.toLocaleString('id-ID');
+                    return (totalMin > 0 || totalMax > 0)
+                        ? `<p class="text-xs font-semibold text-terracotta">${fmt(totalMin)} – ${fmt(totalMax)}</p>`
+                        : '';
+                })()}
+                <p class="text-xs text-stone-400">${day.activities?.length || 0} aktivitas</p>
+            </div>
+
             </div>
             <div class="px-5">${activities}</div>
         </div>
@@ -474,6 +486,68 @@ function getActivityIcon(category) {
         'transport': 'directions_car', 'budaya': 'temple_hindu', 'default': 'place'
     };
     return icons[category?.toLowerCase()] || icons.default;
+}
+
+function buildPriceBadge(act) {
+    const min = parseInt(act.harga_min);
+    const max = parseInt(act.harga_max);
+    const wna = act.wna_price || null;
+    const fmt = (n) => 'Rp ' + n.toLocaleString('id-ID');
+ 
+    // Warna badge berdasarkan kategori
+    const colorMap = {
+        'kuliner'  : 'bg-orange-50 text-orange-600 border-orange-100',
+        'hotel'    : 'bg-blue-50 text-blue-600 border-blue-100',
+        'transport': 'bg-purple-50 text-purple-600 border-purple-100',
+        'belanja'  : 'bg-amber-50 text-amber-600 border-amber-100',
+        'alam'     : 'bg-emerald/10 text-emerald border-emerald/20',
+        'pantai'   : 'bg-emerald/10 text-emerald border-emerald/20',
+        'museum'   : 'bg-emerald/10 text-emerald border-emerald/20',
+        'budaya'   : 'bg-emerald/10 text-emerald border-emerald/20',
+    };
+    const color = colorMap[act.category?.toLowerCase()] || 'bg-stone-100 text-stone-500 border-stone-200';
+ 
+    if (!isNaN(min) && !isNaN(max)) {
+ 
+        // Kasus: GRATIS (0 - 0)
+        if (min === 0 && max === 0) {
+            return `<div class="flex flex-col items-end gap-0.5 flex-shrink-0">
+                <span class="text-xs bg-emerald/10 text-emerald border border-emerald/20 px-2 py-0.5 rounded-full font-medium">
+                    ✓ Gratis
+                </span>
+                ${wna ? `<span class="text-xs text-stone-400">WNA: ${wna}</span>` : ''}
+            </div>`;
+        }
+ 
+        // Kasus: harga pasti / fixed (min == max)
+        if (min === max) {
+            return `<div class="flex flex-col items-end gap-0.5 flex-shrink-0">
+                <span class="text-xs ${color} border px-2 py-0.5 rounded-full font-medium">
+                    ± ${fmt(min)}
+                </span>
+                ${wna ? `<span class="text-xs text-stone-400 font-medium">WNA: ${wna}</span>` : ''}
+            </div>`;
+        }
+ 
+        // Kasus: range harga normal
+        return `<div class="flex flex-col items-end gap-0.5 flex-shrink-0">
+            <span class="text-xs ${color} border px-2 py-0.5 rounded-full font-medium">
+                ± ${fmt(min)} – ${fmt(max)}
+            </span>
+            ${wna ? `<span class="text-xs text-stone-400 font-medium">WNA: ${wna}</span>` : ''}
+        </div>`;
+    }
+ 
+    // Fallback: kalau Gemini masih kirim field ticket lama
+    if (act.ticket) {
+        return `<div class="flex-shrink-0">
+            <span class="text-xs bg-emerald/10 text-emerald-dark border border-emerald/20 px-2 py-0.5 rounded-full">
+                ${act.ticket}
+            </span>
+        </div>`;
+    }
+ 
+    return '';
 }
 
 function renderBudget(items) {
@@ -695,6 +769,19 @@ function formatPriceRange(min, max) {
 }
 
 function renderMap(data) {
+    const existingDisclaimer = document.getElementById('price-disclaimer');
+    if (existingDisclaimer) existingDisclaimer.remove();
+    
+    const disclaimer = document.createElement('div');
+    disclaimer.id = 'price-disclaimer';
+    disclaimer.className = 'px-1 pt-1 pb-3';
+    disclaimer.innerHTML = `
+        <p class="text-xs text-stone-400 text-center flex items-center justify-center gap-1">
+            <span class="material-icons-round text-xs">info</span>
+            Estimasi harga berdasarkan data umum, dapat berbeda di lapangan.
+        </p>
+    `;
+    document.getElementById('tab-itinerary').appendChild(disclaimer);
     const mapRoute = document.getElementById('map-route');
     const routeSummary = document.getElementById('route-summary');
     if (!mapRoute || !routeSummary) return;

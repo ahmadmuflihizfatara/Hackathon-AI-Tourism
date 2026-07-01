@@ -18,13 +18,8 @@ class GeminiService
         $this->apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent";
     }
 
-    /**
-     * Send a conversation history to Gemini and get a structured response.
-     * Returns either a chat message OR a full itinerary JSON.
-     */
     public function chat(array $history): array
     {
-        // Prepend system instruction as first user turn
         $systemPrompt = $this->buildSystemPrompt();
 
         $contents = [
@@ -51,25 +46,22 @@ class GeminiService
 
         try {
           if (function_exists('set_time_limit')) {
-            @set_time_limit(120); // Perpanjang max execution time PHP
+            @set_time_limit(120);
           }
 
-          // Implementasi Retry dengan Exponential Backoff dan Pengaturan Timeout
           $response = Http::retry(3, function (int $attempt, \Exception $exception) {
-              return $attempt * 2000; // Exponential backoff: 2s, 4s, 6s
+              return $attempt * 2000;
           }, function (\Exception $exception) {
-              // Retry jika terjadi masalah koneksi
               if ($exception instanceof \Illuminate\Http\Client\ConnectionException) {
                   return true;
               }
-              // Retry jika status code adalah 429 (Rate Limit) atau 5xx (Server Errors)
               if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                   return in_array($exception->response->status(), [429, 500, 502, 503, 504]);
               }
               return false;
-          }, false) // Parameter throw = false agar mengembalikan response saat max retries tercapai
-            ->timeout(60) // Timeout request dinaikkan menjadi 60 detik
-            ->withOptions(['connect_timeout' => 10]) // Timeout koneksi 10 detik
+          }, false)
+            ->timeout(60)
+            ->withOptions(['connect_timeout' => 10])
             ->withoutVerifying()
             ->withQueryParameters(['key' => $this->apiKey])
             ->post($this->apiUrl, $payload);
@@ -101,38 +93,30 @@ class GeminiService
         }
     }
 
-    /**
-     * Parse Gemini's text response.
-     * If it contains JSON, extract and return as structured itinerary.
-     * Otherwise return as plain chat message.
-     */
     protected function parseResponse(string $text): array
     {
         $json = null;
-        
-        // Try to extract JSON block using string functions (safer than regex for large text)
+
         if (($start = strpos(strtolower($text), '```json')) !== false) {
             $start += 7;
             if (($end = strpos($text, '```', $start)) !== false) {
                 $json = substr($text, $start, $end - $start);
             } else {
-                $json = substr($text, $start); // truncated
+                $json = substr($text, $start);
             }
         } elseif (($start = strpos($text, '{')) !== false && strpos($text, '"destination"') !== false) {
             $end = strrpos($text, '}');
             if ($end !== false && $end > $start) {
                 $json = substr($text, $start, $end - $start + 1);
             } else {
-                $json = substr($text, $start); // truncated
+                $json = substr($text, $start);
             }
         }
 
         if ($json) {
             try {
                 $json = trim($json);
-                // Try to strip trailing commas which often break json_decode
                 $json = preg_replace('/,\s*([\]}])/m', '$1', $json);
-                
                 $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
                 if (isset($data['destination'])) {
@@ -150,9 +134,6 @@ class GeminiService
         return ['message' => trim($text)];
     }
 
-    /**
-     * Build the system prompt that instructs Gemini on its role and output format.
-     */
     protected function buildSystemPrompt(): string
     {
         return <<<'PROMPT'
@@ -184,7 +165,10 @@ Ketika membuat itinerary, HARUS dalam format JSON ini:
           "location": "Nama lokasi/tempat spesifik",
           "category": "alam|pantai|museum|kuliner|hotel|belanja|transport|budaya",
           "description": "Deskripsi singkat 1-2 kalimat",
-          "ticket": "Rp 50.000 (opsional, null jika gratis)"
+          "ticket": "Rp 50.000 (opsional, null jika gratis)",
+          "harga_min": 50000,
+          "harga_max": 150000,
+          "wna_price": "USD 25 (opsional, isi HANYA jika ada tarif khusus wisatawan asing, selain itu null)"
         }
       ]
     }
@@ -250,8 +234,43 @@ ATURAN PENTING:
 - Jika informasi tidak lengkap, tanyakan: provinsi/kota tujuan, berapa hari, budget total
 - SANGAT PENTING: Format JSON harus valid. JANGAN gunakan trailing comma. PASTIKAN semua kurung kurawal } dan kurung siku ] tertutup sempurna di akhir JSON.
 
+ATURAN FIELD harga_min DAN harga_max (WAJIB UNTUK SETIAP AKTIVITAS):
+Field "harga_min" dan "harga_max" WAJIB diisi untuk SETIAP aktivitas tanpa terkecuali.
+Kedua field berisi angka integer dalam satuan Rupiah (tanpa simbol, tanpa titik, tanpa koma).
+Gunakan panduan estimasi berikut dan sesuaikan dengan kota tujuan:
+
+- transport antar kota (bus/travel/kereta): harga_min: 50000, harga_max: 250000
+- transport dalam kota (ojek/taksi/angkot): harga_min: 10000, harga_max: 60000
+- transport sewa motor: harga_min: 70000, harga_max: 120000
+- transport sewa mobil: harga_min: 300000, harga_max: 600000
+- hotel budget: harga_min: 100000, harga_max: 350000
+- hotel menengah: harga_min: 350000, harga_max: 800000
+- hotel bintang: harga_min: 800000, harga_max: 2000000
+- kuliner warung/kaki lima: harga_min: 10000, harga_max: 35000
+- kuliner restoran lokal: harga_min: 35000, harga_max: 100000
+- kuliner restoran menengah: harga_min: 80000, harga_max: 200000
+- tiket wisata alam/pantai umum: harga_min: 5000, harga_max: 30000
+- tiket wisata alam premium: harga_min: 25000, harga_max: 75000
+- tiket museum/budaya: harga_min: 5000, harga_max: 50000
+- tiket wisata ikonik (Borobudur, Prambanan, Komodo, dll): harga_min: 50000, harga_max: 750000
+- belanja oleh-oleh/pasar: harga_min: 50000, harga_max: 500000
+- aktivitas gratis (taman, alun-alun, masjid, pantai umum): harga_min: 0, harga_max: 0
+
+ATURAN FIELD wna_price (OPSIONAL):
+Field "wna_price" HANYA diisi untuk destinasi yang memiliki tarif berbeda untuk wisatawan asing (WNA).
+Contoh destinasi yang WAJIB diisi wna_price: Borobudur, Prambanan, Taman Nasional Komodo,
+Bali Safari & Marine Park, Taman Nasional Bromo, dan destinasi serupa dengan dual pricing.
+Format nilai: string seperti "USD 25" atau "Rp 750.000".
+Untuk semua destinasi lain yang tidak ada tarif WNA khusus → isi null.
+
+Contoh pengisian wna_price yang BENAR:
+- Tiket Candi Borobudur → wna_price: "USD 25"
+- Tiket Prambanan → wna_price: "USD 25"
+- Tiket Taman Nasional Komodo → wna_price: "USD 10"
+- Makan di warung, ojek, hotel → wna_price: null
+
 ATURAN FIELD action DAN location (WAJIB DIIKUTI):
-Field "action" berisi kata kerja / aktivitas singkat (1-3 kata), dan "location" berisi nama tempat spesifiknya.
+Field "action" berisi kata kerja/aktivitas singkat (1-3 kata), dan "location" berisi nama tempat spesifiknya.
 Keduanya WAJIB ada di setiap aktivitas. JANGAN gunakan field "place" lagi.
 
 Contoh yang BENAR:
