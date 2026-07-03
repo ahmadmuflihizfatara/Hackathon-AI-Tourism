@@ -63,16 +63,40 @@ class DestinationImageService
 
     private function resolveImage(string $placeName): array
     {
-        // 1️⃣  Unsplash
-        $unsplash = $this->fromUnsplash($placeName);
-        if ($unsplash['url']) return $unsplash;
+        // 1️⃣  Database lookup (SQLite lokal yang sudah di-seed)
+        try {
+            $dbDest = \App\Models\Destination::findByPlaceName($placeName);
+            if ($dbDest && $dbDest->image_src) {
+                return [
+                    'url'    => $dbDest->image_src,
+                    'source' => 'database',
+                    'credit' => $dbDest->image_credit,
+                    'lat'    => $dbDest->lat,
+                    'lng'    => $dbDest->lng,
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[ImageService] Database query error', ['place' => $placeName, 'err' => $e->getMessage()]);
+        }
 
-        // 2️⃣  Pexels
+        // 2️⃣  Wikipedia API (Gratis, tanpa API key)
+        $wikipedia = $this->fromWikipedia($placeName);
+        if ($wikipedia['url']) return $wikipedia;
+
+        // 3️⃣  Unsplash API (Membutuhkan API key)
+        $unsplash = $this->fromUnsplash($placeName);
+        if ($unsplash['url']) {
+            return array_merge($unsplash, ['lat' => null, 'lng' => null]);
+        }
+
+        // 4️⃣  Pexels API (Membutuhkan API key)
         $pexels = $this->fromPexels($placeName);
-        if ($pexels['url']) return $pexels;
+        if ($pexels['url']) {
+            return array_merge($pexels, ['lat' => null, 'lng' => null]);
+        }
 
         // Tidak ada gambar → null (JS pakai picsum placeholder)
-        return ['url' => null, 'source' => 'none', 'credit' => null];
+        return ['url' => null, 'source' => 'none', 'credit' => null, 'lat' => null, 'lng' => null];
     }
 
     // ── Source 1: Unsplash ────────────────────────────────────────────────────
@@ -87,6 +111,7 @@ class DestinationImageService
         try {
             $response = Http::withHeaders(['Authorization' => "Client-ID {$accessKey}"])
                 ->timeout(8)
+                ->withoutVerifying()
                 ->get('https://api.unsplash.com/search/photos', [
                     'query'          => $placeName . ' Indonesia tourism',
                     'per_page'       => 5,
@@ -142,6 +167,7 @@ class DestinationImageService
         try {
             $response = Http::withHeaders(['Authorization' => $apiKey])
                 ->timeout(8)
+                ->withoutVerifying()
                 ->get('https://api.pexels.com/v1/search', [
                     'query'       => $placeName . ' Indonesia travel',
                     'per_page'    => self::PEXELS_PER_PAGE,
@@ -182,5 +208,58 @@ class DestinationImageService
         }
 
         return ['url' => null, 'source' => 'pexels', 'credit' => null];
+    }
+
+    // ── Source 3: Wikipedia ──────────────────────────────────────────────────
+
+    private function fromWikipedia(string $placeName): array
+    {
+        try {
+            $response = Http::timeout(8)
+                ->withoutVerifying()
+                ->withHeaders([
+                    'User-Agent' => 'NusantaraAI/1.0 (contact: admin@nusantaraai.local)'
+                ])
+                ->get('https://id.wikipedia.org/w/api.php', [
+                    'action'        => 'query',
+                    'generator'     => 'search',
+                    'gsrsearch'     => $placeName,
+                    'gsrlimit'      => 1,
+                    'prop'          => 'pageimages|coordinates',
+                    'piprop'        => 'thumbnail|original',
+                    'pithumbsize'   => 1000,
+                    'format'        => 'json',
+                    'formatversion' => 2,
+                ]);
+
+            if ($response->successful()) {
+                $pages = $response->json('query.pages', []);
+                if (!empty($pages)) {
+                    $page = $pages[0];
+                    $url = $page['original']['source'] ?? $page['thumbnail']['source'] ?? null;
+                    
+                    $lat = null;
+                    $lng = null;
+                    if (isset($page['coordinates'][0])) {
+                        $lat = $page['coordinates'][0]['lat'];
+                        $lng = $page['coordinates'][0]['lon'];
+                    }
+
+                    if ($url) {
+                        return [
+                            'url'    => $url,
+                            'source' => 'wikipedia',
+                            'credit' => "Photo from Wikipedia: " . ($page['title'] ?? $placeName),
+                            'lat'    => $lat ? (string)$lat : null,
+                            'lng'    => $lng ? (string)$lng : null,
+                        ];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[ImageService] Wikipedia API error', ['place' => $placeName, 'err' => $e->getMessage()]);
+        }
+
+        return ['url' => null, 'source' => 'wikipedia', 'credit' => null, 'lat' => null, 'lng' => null];
     }
 }

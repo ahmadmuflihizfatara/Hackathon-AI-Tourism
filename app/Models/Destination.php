@@ -60,17 +60,38 @@ class Destination extends Model
     public static function findByPlaceName(string $placeName): ?self
     {
         $placeName = trim($placeName);
+        $lowerPlace = strtolower($placeName);
 
         // 1. Match nama persis (case-insensitive)
         $found = static::active()
-            ->whereRaw('LOWER(name) = ?', [strtolower($placeName)])
+            ->whereRaw('LOWER(name) = ?', [$lowerPlace])
             ->orderBy('priority')
             ->first();
 
         if ($found) return $found;
 
-        // 2. Match kata kunci utama (nama tempat di-tokenize)
-        $words = array_filter(explode(' ', strtolower($placeName)), fn($w) => strlen($w) > 3);
+        // 2. Match seluruh string secara parsial (misal: "Tanah Lot Bali" mencocokkan "Tanah Lot")
+        $found = static::active()
+            ->where(function ($query) use ($lowerPlace) {
+                $query->whereRaw('LOWER(name) LIKE ?', ["%{$lowerPlace}%"])
+                      ->orWhereRaw('? LIKE "%" || LOWER(name) || "%"', [$lowerPlace]);
+            })
+            ->orderBy('priority')
+            ->first();
+
+        if ($found) return $found;
+
+        // 3. Match kata kunci utama (di-tokenize dengan filter stop-words agar tidak salah mencocokkan kata generik)
+        $stopWords = [
+            'pantai', 'candi', 'taman', 'danau', 'bukit', 'gunung', 'hutan', 'sungai', 
+            'pulau', 'museum', 'pasar', 'jalan', 'bandara', 'hotel', 'restoran', 
+            'warung', 'desa', 'wisata', 'alam', 'raya', 'kota', 'teluk', 'air', 'terjun'
+        ];
+
+        $words = array_filter(explode(' ', $lowerPlace), function($w) use ($stopWords) {
+            return strlen($w) > 3 && !in_array($w, $stopWords);
+        });
+
         foreach ($words as $word) {
             $found = static::active()
                 ->whereRaw('LOWER(name) LIKE ?', ["%{$word}%"])

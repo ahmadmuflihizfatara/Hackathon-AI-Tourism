@@ -3,6 +3,62 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
+<style>
+@media print {
+    /* Hide navigation, chat sidebar, buttons, and overlays */
+    nav, aside, #empty-state, .tab-btn, #btn-export, #loading-overlay, #trip-summary-pill, #chat-form, p.text-center.text-stone-300 {
+        display: none !important;
+    }
+    
+    /* Make right panel fit print pages */
+    body, html, .h-screen, main, section {
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+        background: white !important;
+    }
+    
+    #right-panel, #itinerary-content {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 0 !important;
+    }
+    
+    /* Render all major content tabs sequentially in the print layout */
+    #tab-itinerary, #tab-budget, #tab-tips, #tab-aturan, #tab-kendaraan {
+        display: block !important;
+        page-break-after: always;
+        break-after: page;
+        padding: 20px 0 !important;
+        background: white !important;
+    }
+    
+    #tab-rute {
+        display: none !important;
+    }
+
+    /* Print color adjustment for terracotta elements */
+    .bg-white {
+        background-color: #fff !important;
+        border: 1px solid #e5e7eb !important;
+    }
+    
+    .text-stone-800 {
+        color: #1f2937 !important;
+    }
+    
+    .bg-terracotta {
+        background-color: #c2410c !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+</style>
+
 <div class="flex flex-col h-screen overflow-hidden">
 
     {{-- ========== TOP NAV ========== --}}
@@ -355,8 +411,53 @@ function renderItinerary(data) {
     // Render rekomendasi kendaraan
     renderKendaraan(data.transportation || data.kendaraan || []);
 
-    //Render route
-    renderMap(data);
+    // ── Fetch Batch Images & Coordinates ──
+    const places = [];
+    (data.schedule || []).forEach(day => {
+        (day.activities || []).forEach(act => {
+            const loc = act.location || act.place;
+            if (loc) places.push(loc);
+        });
+    });
+
+    if (places.length > 0) {
+        fetch('/api/destinations/images', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ places: [...new Set(places)] }),
+        })
+        .then(res => res.json())
+        .then(resData => {
+            const imagesMap = resData.images || {};
+            window.placeMetadata = imagesMap; // simpan untuk rendering peta
+
+            // Update gambar & credit di DOM
+            for (const [place, info] of Object.entries(imagesMap)) {
+                if (info && info.url) {
+                    const safePlace = place.replace(/"/g, '\\"');
+                    document.querySelectorAll(`img[data-place="${safePlace}"]`).forEach(img => {
+                        img.src = info.url;
+                    });
+                    document.querySelectorAll(`[data-credit-place="${safePlace}"]`).forEach(el => {
+                        el.textContent = info.credit || '';
+                        el.classList.remove('hidden');
+                    });
+                }
+            }
+
+            // Render ulang peta dengan koordinat dinamis baru
+            renderMap(data);
+        })
+        .catch(err => {
+            console.error('Gagal mengambil gambar destinasi dinamis:', err);
+            renderMap(data);
+        });
+    } else {
+        renderMap(data);
+    }
 }
 
 // ── SVG Illustration System ───────────────────────────────────
@@ -430,17 +531,19 @@ function buildDayCard(day, dayNum) {
                     ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
                     <div class="ml-6 rounded-xl overflow-hidden border border-stone-100 relative" style="height:200px;background:${getIllustrationAccent(act.category)};">
                         <img
+                            data-place="${escapeHtml(displayLocation)}"
                             src="${getIllustrationSrc(act.category)}"
                             alt="Ilustrasi ${displayLocation}"
                             class="w-full h-full object-cover"
                             loading="lazy"
                         />
-                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 via-black/15 to-transparent px-3 py-2.5 pointer-events-none">
+                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
                             ${displayAction
-                                ? `<p class="text-white/80 text-xs leading-tight">${displayAction}</p>
+                                ? `<p class="text-white/80 text-[10px] uppercase tracking-wider leading-tight">${displayAction}</p>
                                    <p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
                                 : `<p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
                             }
+                            <p class="text-[9px] text-white/50 truncate hidden mt-0.5" data-credit-place="${escapeHtml(displayLocation)}"></p>
                         </div>
                     </div>
                 </div>
@@ -912,19 +1015,28 @@ function renderMap(data) {
 
         // Get coordinates for places (fallback to Indonesia center if not found)
         const markers = [];
+        const meta = window.placeMetadata || {};
         places.forEach((place, idx) => {
-            // Try to find matching city/location
             let coords = null;
-            for (const [city, coord] of Object.entries(cityCoords)) {
-                if (place.toLowerCase().includes(city.toLowerCase())) {
-                    coords = coord;
-                    break;
+            
+            // 1. Coba ambil koordinat presisi dari metadata dinamis (Database/Wikipedia)
+            if (meta[place] && meta[place].lat && meta[place].lng) {
+                coords = [parseFloat(meta[place].lat), parseFloat(meta[place].lng)];
+            }
+            
+            // 2. Fallback ke cityCoords manual
+            if (!coords) {
+                for (const [city, coord] of Object.entries(cityCoords)) {
+                    if (place.toLowerCase().includes(city.toLowerCase())) {
+                        coords = coord;
+                        break;
+                    }
                 }
             }
 
             if (coords) {
                 const marker = L.marker(coords, {
-                    opacity: 0.8
+                    opacity: 0.9
                 }).addTo(window.routeMap)
                     .bindPopup(`<strong>${idx + 1}. ${place}</strong>`)
                     .openPopup();
@@ -1034,7 +1146,12 @@ function scrollToBottom() {
 }
 
 function escapeHtml(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (typeof text !== 'string') return '';
+    return text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;')
+               .replace(/"/g, '&quot;')
+               .replace(/'/g, '&#039;');
 }
 
 function resetChat() {
@@ -1043,7 +1160,7 @@ function resetChat() {
 }
 
 function exportItinerary() {
-    alert('Fitur ekspor PDF akan segera hadir!');
+    window.print();
 }
 
 // ── Auto-load from URL query ──────────────────────────────────
