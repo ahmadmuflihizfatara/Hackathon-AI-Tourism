@@ -153,7 +153,7 @@
                         <span class="material-icons-round text-white">send</span>
                     </button>
                 </form>
-                <p class="text-center text-xs text-stone-300 mt-2">Didukung Google Gemini AI</p>
+                <p class="text-center text-xs text-stone-300 mt-2">Didukung Gemma & LM Studio (Local LLM)</p>
             </div>
         </aside>
 

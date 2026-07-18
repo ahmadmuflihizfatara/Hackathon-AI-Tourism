@@ -27,9 +27,10 @@ return [
 
     // ── AI ─────────────────────────────────────────────────────────────────
 
-    'gemini' => [
-        'key'   => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+    'lmstudio' => [
+        'url' => env('LM_STUDIO_API_URL', 'http://localhost:1234/v1'),
+        'model' => env('LM_STUDIO_MODEL', 'gemma-4-e4b'),
+        'embedding_model' => env('LM_STUDIO_EMBEDDING_MODEL', 'bge-m3'),
     ],
 
     // ── Image APIs (fallback chain: Unsplash → Pexels → Wikimedia) ─────────

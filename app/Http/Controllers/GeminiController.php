@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\GeminiService;
+use App\Services\LmStudioService;
+use App\Services\RagService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
 class GeminiController extends Controller
 {
-    public function __construct(protected GeminiService $gemini) {}
+    public function __construct(
+        protected LmStudioService $lmService,
+        protected RagService $ragService
+    ) {}
 
     /**
      * Handle chat message from frontend dashboard.
@@ -31,7 +35,24 @@ class GeminiController extends Controller
             ], 422);
         }
 
-        $result = $this->gemini->chat($request->input('history'));
+        $history = $request->input('history');
+
+        // Retrieve latest user message to use as RAG query
+        $latestUserMessage = '';
+        for ($i = count($history) - 1; $i >= 0; $i--) {
+            if ($history[$i]['role'] === 'user') {
+                $latestUserMessage = $history[$i]['parts'][0]['text'] ?? '';
+                break;
+            }
+        }
+
+        $ragContext = '';
+        if (!empty($latestUserMessage)) {
+            // Find Top 5 relevant context
+            $ragContext = $this->ragService->searchContext($latestUserMessage, 5);
+        }
+
+        $result = $this->lmService->chat($history, $ragContext);
 
         return response()->json($result);
     }

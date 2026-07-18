@@ -1,6 +1,8 @@
-# 🌴 NusantaraAI — Tourism Itinerary Planner
+# 🌴 NusantaraAI — Tourism Itinerary Planner (Local LLM / RAG Version)
 
-Aplikasi web perencanaan wisata Indonesia berbasis AI menggunakan **Laravel 11**, **Blade**, **Tailwind CSS**, dan **Google Gemini AI**.
+Aplikasi web perencanaan wisata Indonesia berbasis AI menggunakan **Laravel 11**, **Blade**, **Tailwind CSS**, dan **Local LLM (LM Studio + Gemma 2 + BGE-M3 RAG)**.
+
+Versi ini tidak lagi menggunakan Google Gemini API, melainkan berjalan secara lokal sepenuhnya (Local AI) menjaga privasi data, serta memanfaatkan teknologi *Retrieval-Augmented Generation* (RAG) untuk memberikan data tempat wisata yang lebih akurat sesuai dataset (XLSX).
 
 ---
 
@@ -10,357 +12,159 @@ Aplikasi web perencanaan wisata Indonesia berbasis AI menggunakan **Laravel 11**
 |---|---|
 | **Framework** | Laravel 11 + Blade |
 | **CSS** | Tailwind CSS v3 + Vite |
-| **AI** | Google Gemini 1.5 Flash (gratis) |
+| **AI Backend** | LM Studio (Local LLM API) |
+| **LLM Model** | Gemma 4 (e4b) / Gemma 2 |
+| **Embedding Model**| BGE-M3 (BAAI) |
+| **Database RAG** | Database Relasional via Laravel |
 | **Icons** | Google Material Icons Round |
-| **Font Judul** | Poppins |
-| **Font Body** | Open Sans |
 | **Warna Utama** | Terracotta `#C1602B` |
-| **Background** | Warm Sand `#F5EFE6` |
-| **Aksen** | Emerald Green `#3A7D5C` |
 
 ---
 
-## 📁 Struktur Proyek
+## 📁 Struktur Proyek Utama Terkait RAG
 
 ```
 nusantaraai/
 ├── app/
-│   ├── Http/Controllers/
-│   │   ├── PageController.php      ← Landing & Dashboard pages
-│   │   └── GeminiController.php    ← API endpoint untuk Gemini
-│   └── Services/
-│       └── GeminiService.php       ← Logika komunikasi ke Gemini API
-├── resources/
-│   ├── css/
-│   │   └── app.css                 ← Tailwind + custom utilities
-│   ├── js/
-│   │   └── app.js                  ← Entry point Vite
-│   └── views/
-│       ├── layouts/
-│       │   └── app.blade.php       ← Layout utama (fonts, icons, meta)
-│       ├── pages/
-│       │   ├── landing.blade.php   ← Halaman beranda dengan chatbot
-│       │   └── dashboard.blade.php ← Dashboard 2 kolom (chat + itinerary)
-│       ├── components/
-│       │   ├── stat-card.blade.php
-│       │   ├── chat-bubble.blade.php
-│       │   ├── activity-item.blade.php
-│       │   ├── budget-row.blade.php
-│       │   └── tip-card.blade.php
-│       └── errors/
-│           ├── 404.blade.php
-│           └── 500.blade.php
-├── routes/
-│   ├── web.php                     ← Route halaman (GET /, GET /dashboard)
-│   └── api.php                     ← Route API (POST /api/gemini)
-├── config/
-│   └── services.php                ← Konfigurasi Gemini API key
-├── tailwind.config.js              ← Konfigurasi warna & font custom
-├── vite.config.js
-├── postcss.config.js
-├── package.json
-└── .env.example
+│   ├── Console/Commands/
+│   │   └── IngestDatasetCommand.php ← Command untuk import dataset XLSX
+│   ├── Models/
+│   │   └── KnowledgeBase.php        ← Model untuk menyimpan vektor dataset
+│   ├── Services/
+│   │   └── LmStudioService.php      ← Logika komunikasi ke LM Studio (Chat & Embedding)
+├── database/
+│   └── migrations/
+│       └── ...create_knowledge_bases_table.php ← Skema tabel vector RAG
+├── storage/
+│   └── app/Storage/
+│       └── Dataset_Toba_Normalized.xlsx ← Dataset acuan RAG
 ```
 
 ---
 
-## 🚀 Cara Instalasi (Lokal)
+## 🚀 Langkah-langkah Instalasi & Menjalankan Aplikasi
 
-### 1. Buat Proyek Laravel Baru
+Ikuti panduan berikut secara berurutan agar aplikasi dan Local LLM berjalan sinkron.
 
-```bash
-composer create-project laravel/laravel nusantaraai
-cd nusantaraai
-```
+### Tahap 1: Persiapan Local LLM (LM Studio)
+1. **Download dan Install LM Studio** dari [https://lmstudio.ai/](https://lmstudio.ai/).
+2. Buka LM Studio, pergi ke kolom pencarian (Search).
+3. Cari dan download dua model berikut:
+   - **Gemma 4 e4b / Gemma 2** dengan format GGUF (sebagai model utama obrolan/reasoning).
+   - **BGE-M3** (sebagai model Text Embedding untuk vektor RAG).
+4. Masuk ke tab **Local Server** (ikon ↔️ di kiri).
+5. Load (muat) model Gemma pada slot Text/Chat Model.
+6. Pastikan kapabilitas Text Embeddings aktif dan Load model BGE-M3 (terutama jika menggunakan multi-model setup pada LM Studio terbaru).
+7. Klik tombol **Start Server**. Server API akan berjalan pada `http://127.0.0.1:1234/v1`.
 
-### 2. Copy Semua File dari Repo Ini
+### Tahap 2: Persiapan Aplikasi Laravel
+1. Buka terminal, masuk ke folder aplikasi:
+   ```bash
+   cd c:\xampp\htdocs\aitourism\itinerary-planner-tourism
+   ```
+2. Install dependensi PHP & Node.js:
+   ```bash
+   composer install
+   npm install
+   ```
+3. Sesuaikan konfigurasi di `.env`:
+   ```env
+   # Ganti koneksi database sesuai environment (misal MySQL)
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=nama_database_kamu
+   DB_USERNAME=root
+   DB_PASSWORD=
 
-Salin semua file sesuai struktur di atas ke dalam folder proyek Laravel kamu.
+   # Konfigurasi LM Studio Local AI
+   LMSTUDIO_API_URL=http://127.0.0.1:1234/v1
+   LMSTUDIO_CHAT_MODEL=gemma-4-e4b
+   LMSTUDIO_EMBEDDING_MODEL=bge-m3
+   ```
+4. Jalankan Migrasi Database untuk membuat tabel-tabel termasuk tabel untuk Knowledge Base (vektor):
+   ```bash
+   php artisan migrate
+   ```
 
-### 3. Install Dependensi PHP
+### Tahap 3: Menelan Dataset (Ingestion) untuk RAG
+Sistem ini menggunakan teknik *Retrieval-Augmented Generation* (RAG) untuk membaca dataset. Dataset dalam bentuk format Excel (`.xlsx`) perlu dikonversi ke vektor embedding agar relevansinya bisa dicari saat AI merancang itinerary.
 
-```bash
-composer require guzzlehttp/guzzle
-```
+1. Pastikan file Excel tersedia di `app/Storage/Dataset_Toba_Normalized.xlsx` (atau ubah argumen sesuai lokasi aslinya).
+2. Jalankan perintah ingest (Terminal):
+   ```bash
+   php artisan rag:ingest "app/Storage/Dataset_Toba_Normalized.xlsx"
+   ```
+3. Proses ini akan membaca setiap baris Excel, mengirimkannya ke LM Studio untuk diubah menjadi *embedding vector*, lalu menyimpannya ke database. 
+   *(Tunggu hingga indikator progress 100% Selesai)*.
 
-### 4. Install Dependensi Node.js
+### Tahap 4: Menjalankan Frontend & Backend
+Aplikasi membutuhkan 2 terminal yang berjalan secara bersamaan.
 
-```bash
-npm install
-```
-
-### 5. Setup Environment
-
-```bash
-cp .env.example .env
-php artisan key:generate
-```
-
----
-
-## 🔑 Cara Mendapatkan & Menggunakan Gemini API (GRATIS)
-
-### Langkah 1 — Daftar di Google AI Studio
-
-1. Buka **https://aistudio.google.com/**
-2. Login dengan akun Google kamu
-3. Klik **"Get API Key"** di menu kiri atas
-4. Klik **"Create API Key"**
-5. Pilih project Google Cloud (atau buat baru — gratis)
-6. **Copy API Key** yang muncul (format: `AIzaSy...`)
-
-> ✅ **Gemini 1.5 Flash gratis** dengan limit:
-> - 15 request per menit
-> - 1.000.000 token per menit  
-> - 1.500 request per hari
-> Cukup untuk development dan demo!
-
-### Langkah 2 — Tambahkan ke file `.env`
-
-Buka file `.env` di root project, cari dan isi:
-
-```env
-GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-GEMINI_MODEL=gemini-1.5-flash
-```
-
-### Langkah 3 — Verifikasi Konfigurasi
-
-Di `config/services.php` sudah terdapat:
-
-```php
-'gemini' => [
-    'key'   => env('GEMINI_API_KEY'),
-    'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
-],
-```
-
-### Langkah 4 — Cara Kerja Alur API
-
-```
-Browser (dashboard.blade.php)
-    │  POST /api/gemini  { history: [...] }
-    ▼
-GeminiController.php
-    │  Validasi input
-    ▼
-GeminiService.php
-    │  Tambah system prompt
-    │  POST ke Gemini API
-    ▼
-Google Gemini 1.5 Flash
-    │  Return teks / JSON itinerary
-    ▼
-GeminiService::parseResponse()
-    │  Detect JSON itinerary atau plain chat
-    ▼
-Browser
-    │  Render chat bubble ATAU render itinerary panel
-```
-
----
-
-## 🖼️ Sistem Gambar Multi-Source (Unsplash → Pexels → Wikimedia)
-
-Aplikasi menggunakan sistem fallback berlapis untuk mendapatkan gambar destinasi berkualitas tinggi. Wikimedia yang sebelumnya digunakan langsung dari frontend kini menjadi fallback terakhir di backend.
-
-### Urutan Prioritas
-
-```
-Permintaan gambar dari frontend (satu batch POST)
-        │
-        ▼
-[1] Database Lokal (tabel destinations)
-        │ Tidak ada →
-        ▼
-[2] Unsplash API  ← UTAMA (50 req/jam, gratis)
-        │ Tidak ada / key kosong →
-        ▼
-[3] Pexels API    ← BACKUP (200 req/jam, gratis)
-        │ Tidak ada / key kosong →
-        ▼
-[4] Wikimedia Commons  ← FALLBACK (tanpa key)
-        │ Tidak ada →
-        ▼
-[5] Picsum placeholder (client-side, random)
-```
-
-> Semua hasil di-**cache 24 jam** via Laravel Cache sehingga kuota API tidak terbuang untuk destinasi yang sama.
-
----
-
-### 🔑 Setup API Keys Gambar
-
-#### A. Unsplash (Sumber Utama — GRATIS)
-
-1. Buka **https://unsplash.com/developers**
-2. Klik **"Your Apps"** → **"New Application"**
-3. Isi nama & deskripsi, centang semua persetujuan
-4. Scroll ke bawah → copy **"Access Key"** (bukan "Secret Key")
-5. Tambahkan ke `.env`:
-
-```env
-UNSPLASH_ACCESS_KEY=your_unsplash_access_key_here
-```
-
-#### B. Pexels (Backup — GRATIS)
-
-1. Buka **https://www.pexels.com/api/**
-2. Klik **"Get Started"** dan login/daftar
-3. Isi form penggunaan API, tunggu persetujuan (biasanya instan)
-4. Copy API Key dari dashboard
-5. Tambahkan ke `.env`:
-
-```env
-PEXELS_API_KEY=your_pexels_api_key_here
-```
-
-#### C. Wikimedia (Fallback — Tanpa Key)
-
-Tidak perlu konfigurasi. Wikimedia sudah terintegrasi sebagai fallback otomatis.
-
----
-
-### 📁 File yang Perlu Ditambahkan / Diubah
-
-| File | Aksi |
-|---|---|
-| `app/Services/DestinationImageService.php` | ✅ **File baru** — service fallback chain |
-| `config/services.php` | ✏️ **Edit** — tambahkan blok `unsplash` dan `pexels` |
-| `.env` | ✏️ **Edit** — isi `UNSPLASH_ACCESS_KEY` dan `PEXELS_API_KEY` |
-| `resources/views/pages/dashboard.blade.php` | ✏️ **Edit** — update fungsi JS image fetcher |
-
-#### Perbarui `config/services.php` — tambahkan di bawah blok `gemini`:
-
-```php
-// Image APIs (fallback chain: Unsplash → Pexels → Wikimedia)
-'unsplash' => [
-    'access_key' => env('UNSPLASH_ACCESS_KEY'),
-],
-
-'pexels' => [
-    'api_key' => env('PEXELS_API_KEY'),
-],
-```
-
----
-
-## ▶️ Menjalankan Aplikasi Lokal
-
-Buka **2 terminal** secara bersamaan:
-
-**Terminal 1 — Laravel Server:**
+**Terminal 1 — Backend Laravel:**
 ```bash
 php artisan serve
 ```
+*(Server backend berjalan di `http://127.0.0.1:8000`)*
 
-**Terminal 2 — Vite (CSS/JS hot reload):**
+**Terminal 2 — Frontend (Vite / Tailwind CSS):**
 ```bash
 npm run dev
 ```
+*(Server frontend akan me-reload CSS/JS secara live saat ada perubahan file Blade/CSS)*
 
-Lalu buka browser: **http://localhost:8000**
+Buka browser kamu dan navigasi ke: **[http://localhost:8000](http://localhost:8000)**. 
+Selamat! Aplikasi NusantaraAI dengan AI lokal kini berjalan!
 
 ---
 
-## 🗺️ Alur Pengguna
+## 🗺️ Alur Kerja Sistem AI (RAG Process)
 
 ```
-[Landing Page /]
-   Pengguna ketik destinasi di chatbot
-        ↓
-   Redirect ke [Dashboard /dashboard?q=...]
-        ↓
-   ┌──────────────────┬─────────────────────────────┐
-   │  KOLOM KIRI      │  KOLOM KANAN                │
-   │  Chat AI         │  Hasil Itinerary             │
-   │  ─────────────── │  ──────────────────────────  │
-   │  • Input teks    │  • Header destinasi          │
-   │  • Bubble chat   │  • Tab: Jadwal / Budget / Tips│
-   │  • Typing anim.  │  • Day cards per hari        │
-   │  • Follow-up Q   │  • Budget breakdown          │
-   └──────────────────┴─────────────────────────────┘
-```
-
----
-
-## 💬 Contoh Prompt yang Bisa Digunakan
-
-- `"Mau ke Bali 5 hari, budget Rp 3 juta, suka pantai dan kuliner"`
-- `"Rencanakan wisata Yogyakarta 3 hari untuk keluarga dengan 2 anak"`
-- `"Itinerary Raja Ampat 7 hari budget Rp 10 juta, fokus snorkeling"`
-- `"Wisata sejarah Solo 2 hari budget hemat Rp 500 ribu"`
-
----
-
-## 🛠️ Troubleshooting
-
-### ❌ Gambar destinasi tidak muncul / semua placeholder
-→ Pastikan `UNSPLASH_ACCESS_KEY` dan `PEXELS_API_KEY` sudah diisi di `.env`  
-→ Jalankan `php artisan config:clear` setelah mengubah `.env`  
-→ Cek log di `storage/logs/laravel.log` untuk detail error API  
-→ Cek kuota Unsplash di https://unsplash.com/oauth/applications (50 req/jam)  
-→ Cek kuota Pexels di https://www.pexels.com/api/
-
-### ❌ Cache gambar tidak terupdate (foto masih lama setelah ganti key)
-→ Jalankan `php artisan cache:clear` untuk menghapus cache gambar (24 jam TTL)
-
-### ❌ Error: "API Key tidak valid"
-→ Pastikan `.env` sudah diisi `GEMINI_API_KEY` dengan benar  
-→ Jalankan `php artisan config:clear`
-
-### ❌ CSS tidak muncul / tampilan rusak
-→ Pastikan `npm run dev` sedang berjalan di terminal terpisah  
-→ Atau build dulu: `npm run build`
-
-### ❌ Error 419 (CSRF)
-→ Pastikan `<meta name="csrf-token">` ada di layout  
-→ Jalankan `php artisan key:generate` jika `APP_KEY` kosong
-
-### ❌ Error "Route not found"
-→ Jalankan `php artisan route:clear && php artisan route:cache`
-
-### ❌ Gemini tidak merespons / timeout
-→ Cek koneksi internet  
-→ Cek limit harian di https://aistudio.google.com/  
-→ Model `gemini-1.5-flash` lebih cepat dari `gemini-1.5-pro`
-
----
-
-## 📦 Perintah Artisan Berguna
-
-```bash
-# Bersihkan cache
-php artisan optimize:clear
-
-# Lihat semua routes
-php artisan route:list
-
-# Cache config untuk production
-php artisan config:cache
-
-# Cache routes
-php artisan route:cache
+[User Input: "Buat itinerary wisata..."]
+        │
+        ▼
+1. Backend (LmStudioService) meng-generate 
+   "Embedding Vector" dari input user via 
+   LM Studio (menggunakan BGE-M3).
+        │
+        ▼
+2. Vector Search (RAG): Mencari data di tabel
+   KnowledgeBase yang paling relevan (kosinus) 
+   dengan pertanyaan user.
+        │
+        ▼
+3. Merakit Prompt: Menggabungkan Input User + 
+   Konteks Data RAG yang didapat (Data Destinasi)
+   + System Prompt utama.
+        │
+        ▼
+4. Inference Chat: Mengirim prompt utuh yang 
+   sudah disuntikkan konteks ke LM Studio 
+   (Model Gemma).
+        │
+        ▼
+5. Output JSON Itinerary diterima dan di-render 
+   secara visual ke Dashboard.
 ```
 
 ---
 
-## 🔮 Fitur yang Bisa Dikembangkan Selanjutnya
+## 🛠️ Troubleshooting (Kendala Umum)
 
-- [ ] Export itinerary ke PDF (menggunakan `barryvdh/laravel-dompdf`)
-- [ ] Peta interaktif dengan Leaflet.js + OpenStreetMap
-- [ ] Foto tempat wisata dari Unsplash API (gratis)
-- [ ] Simpan itinerary ke database (login pengguna)
-- [ ] Share itinerary via link unik
-- [ ] Mode offline / PWA
-- [ ] Multi-bahasa (Indonesia + Inggris)
+### ❌ Ingestion Dataset Gagal / Error "Memory Size Exhausted"
+- **Penyebab**: Proses parsing XLSX besar memakan RAM (batas default PHP biasanya 128MB).
+- **Solusi**: Command `rag:ingest` sudah ditambahkan baris `ini_set('memory_limit', '-1')` agar batas memori terbuka. Pastikan tidak menghapus baris tersebut. Jika masih gagal, cek apakah file Excel memiliki ribuan row kosong yang ikut terbaca.
+
+### ❌ AI Tidak Merespons / "Maaf, terjadi kesalahan saat menghubungi AI Lokal"
+- **Solusi**: 
+  1. Pastikan tombol hijau **Start Server** di LM Studio menyala.
+  2. Pastikan port sesuai antara LM Studio (biasanya 1234) dengan variabel `LMSTUDIO_API_URL` di `.env`.
+  3. Buka `http://127.0.0.1:1234/v1/models` di browser. Jika memunculkan file JSON, berarti server lokal menyala.
+
+### ❌ Itinerary Tidak Menggunakan Data dari Dataset
+- **Solusi**: Pastikan proses Ingestion (Tahap 3) sukses 100%. Pastikan LM Studio mengizinkan endpoint `/v1/embeddings` pada BGE-M3. Cek kembali `LmStudioService.php` apakah logika Vector Search RAG sudah digabungkan secara benar ke prompt sebelum dikirim ke chat completions.
 
 ---
 
-## 📄 Lisensi
-
-MIT License — bebas digunakan untuk keperluan edukasi dan hackathon.
-
----
-
-Dibuat dengan ❤️ untuk **UI/UX Hackathon AI Tourism** 🌴
+Dibuat dengan ❤️ untuk **UI/UX Hackathon AI Tourism** 🌴 (Local LLM Edition)
