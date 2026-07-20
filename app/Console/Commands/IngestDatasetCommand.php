@@ -13,7 +13,7 @@ class IngestDatasetCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(\App\Services\LmStudioService $lmService)
+    public function handle(\App\Services\GeminiApiService $lmService, \App\Services\ChromaDbService $chromaService)
     {
         ini_set('memory_limit', '-1'); // Mencegah error exhausted memory
 
@@ -39,12 +39,18 @@ class IngestDatasetCommand extends Command
             $headers = array_shift($rows);
             $total = count($rows);
             
-            $this->info("Found {$total} records. Ingesting...");
+            $this->info("Found {$total} records. Ingesting to ChromaDB...");
             
             $bar = $this->output->createProgressBar($total);
             $bar->start();
 
-            foreach ($rows as $row) {
+            $batchSize = 50;
+            $batchIds = [];
+            $batchEmbeddings = [];
+            $batchDocuments = [];
+            $batchMetadatas = [];
+
+            foreach ($rows as $index => $row) {
                 // Skip completely empty rows
                 if (empty(array_filter($row))) {
                     $bar->advance();
@@ -53,8 +59,8 @@ class IngestDatasetCommand extends Command
 
                 // Construct text representation
                 $contentParts = [];
-                foreach ($headers as $index => $header) {
-                    $value = $row[$index] ?? '';
+                foreach ($headers as $colIndex => $header) {
+                    $value = $row[$colIndex] ?? '';
                     if (!empty($value)) {
                         $contentParts[] = "{$header}: {$value}";
                     }
@@ -66,15 +72,29 @@ class IngestDatasetCommand extends Command
                 $embedding = $lmService->embed($content);
                 
                 if ($embedding) {
-                    \App\Models\KnowledgeBase::create([
-                        'content' => $content,
-                        'embedding' => $embedding
-                    ]);
+                    $id = uniqid("doc_{$index}_", true);
+                    $batchIds[] = $id;
+                    $batchEmbeddings[] = $embedding;
+                    $batchDocuments[] = $content;
+                    $batchMetadatas[] = ['source' => 'dataset_xlsx', 'row_index' => $index];
+
+                    if (count($batchIds) >= $batchSize) {
+                        $chromaService->addDocuments($batchIds, $batchEmbeddings, $batchDocuments, $batchMetadatas);
+                        $batchIds = [];
+                        $batchEmbeddings = [];
+                        $batchDocuments = [];
+                        $batchMetadatas = [];
+                    }
                 } else {
                     $this->error("\nFailed to get embedding for: " . substr($content, 0, 50) . "...");
                 }
 
                 $bar->advance();
+            }
+
+            // Insert remaining
+            if (count($batchIds) > 0) {
+                $chromaService->addDocuments($batchIds, $batchEmbeddings, $batchDocuments, $batchMetadatas);
             }
 
             $bar->finish();

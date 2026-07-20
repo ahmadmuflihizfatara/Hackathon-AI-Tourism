@@ -5,87 +5,88 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class LmStudioService
+class GeminiApiService
 {
-    protected string $apiUrl;
+    protected string $apiKey;
     protected string $model;
     protected string $embeddingModel;
 
     public function __construct()
     {
-        $this->apiUrl = trim(config('services.lmstudio.url', 'http://localhost:1234/v1'));
-        $this->model  = trim(config('services.lmstudio.model', 'gemma-4-e4b'));
-        $this->embeddingModel = trim(config('services.lmstudio.embedding_model', 'bge-m3'));
+        $this->apiKey = trim(config('services.gemini.api_key', ''));
+        $this->model  = trim(config('services.gemini.model', 'gemini-1.5-flash'));
+        $this->embeddingModel = trim(config('services.gemini.embedding_model', 'gemini-embedding-2'));
     }
 
     public function chat(array $history, string $ragContext = ''): array
     {
+        if (empty($this->apiKey)) {
+            return ['message' => 'API Key Gemini belum diatur di file .env (GEMINI_API_KEY).'];
+        }
+
         $systemPrompt = $this->buildSystemPrompt();
         
         if (!empty($ragContext)) {
             $systemPrompt .= "\n\nINFORMASI TAMBAHAN (Konteks RAG):\n" . $ragContext;
         }
 
-        // Convert Gemini history format to OpenAI format
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt]
-        ];
-
-        foreach ($history as $msg) {
-            $role = $msg['role'] === 'model' ? 'assistant' : 'user';
-            $content = $msg['parts'][0]['text'] ?? '';
-            $messages[] = ['role' => $role, 'content' => $content];
-        }
-
         $payload = [
-            'model'       => $this->model,
-            'messages'    => $messages,
-            'temperature' => 0.7,
-            'max_tokens'  => 4096,
+            'systemInstruction' => [
+                'parts' => [['text' => $systemPrompt]]
+            ],
+            'contents' => $history,
+            'generationConfig' => [
+                'temperature' => 0.7,
+                'maxOutputTokens' => 8192,
+            ]
         ];
 
         try {
-            if (function_exists('set_time_limit')) {
-                @set_time_limit(180);
-            }
-
-            $response = Http::timeout(120)
-                ->withOptions(['connect_timeout' => 10])
-                ->post("{$this->apiUrl}/chat/completions", $payload);
+            $response = Http::timeout(60) // 60s is plenty for cloud APIs
+                ->withoutVerifying() // Bypass SSL error cURL 60 di XAMPP Windows
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", $payload);
 
             if ($response->failed()) {
-                Log::error('LM Studio API error', ['status' => $response->status(), 'body' => $response->body()]);
-                return ['message' => 'Maaf, terjadi kesalahan saat menghubungi AI Lokal. Pastikan LM Studio sedang berjalan.'];
+                Log::error('Gemini API error', ['status' => $response->status(), 'body' => $response->body()]);
+                return ['message' => 'Maaf, terjadi kesalahan saat menghubungi server Google Gemini.'];
             }
 
-            $text = $response->json('choices.0.message.content', '');
-            Log::info('LM Studio raw response', ['text' => $text]);
+            $text = $response->json('candidates.0.content.parts.0.text', '');
+            Log::info('Gemini API raw response', ['text' => substr($text, 0, 500) . '...']);
             return $this->parseResponse($text);
 
         } catch (\Exception $e) {
-            Log::error('LM Studio exception', ['error' => $e->getMessage()]);
-            return ['message' => 'Terjadi gangguan koneksi ke LM Studio. Pastikan server lokal sudah aktif di ' . $this->apiUrl];
+            Log::error('Gemini API exception', ['error' => $e->getMessage()]);
+            return ['message' => 'Terjadi gangguan koneksi ke Google Gemini. Silakan coba lagi.'];
         }
     }
 
     public function embed(string $text): ?array
     {
+        if (empty($this->apiKey)) {
+            Log::error('Gemini API key is missing for embeddings.');
+            return null;
+        }
+
         $payload = [
-            'model' => $this->embeddingModel,
-            'input' => $text
+            'model' => 'models/' . $this->embeddingModel,
+            'content' => [
+                'parts' => [['text' => $text]]
+            ]
         ];
 
         try {
-            $response = Http::timeout(60)
-                ->post("{$this->apiUrl}/embeddings", $payload);
+            $response = Http::timeout(30)
+                ->withoutVerifying() // Bypass SSL error cURL 60 di XAMPP Windows
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->embeddingModel}:embedContent?key={$this->apiKey}", $payload);
 
             if ($response->successful()) {
-                return $response->json('data.0.embedding');
+                return $response->json('embedding.values');
             }
             
-            Log::error('LM Studio Embeddings error', ['status' => $response->status(), 'body' => $response->body()]);
+            Log::error('Gemini API Embeddings error', ['status' => $response->status(), 'body' => $response->body()]);
         } catch (\Exception $e) {
-            Log::error('LM Studio Embeddings exception', ['error' => $e->getMessage()]);
+            Log::error('Gemini API Embeddings exception', ['error' => $e->getMessage()]);
         }
 
         return null;
@@ -124,7 +125,7 @@ class LmStudioService
                     ];
                 }
             } catch (\JsonException $e) {
-                Log::warning('LM Studio JSON parse error', ['error' => $e->getMessage()]);
+                Log::warning('Gemini API JSON parse error', ['error' => $e->getMessage()]);
                 return ['message' => 'Maaf, itinerary berhasil dibuat namun formatnya terpotong atau tidak valid. Silakan coba "Mulai Ulang" atau kirim ulang permintaanmu.'];
             }
         }
@@ -139,8 +140,10 @@ Kamu adalah NusantaraAI, asisten perencanaan wisata Indonesia yang ramah dan ber
 
 TUGASMU:
 1. Bantu pengguna merencanakan perjalanan wisata di Indonesia
-2. Ketika pengguna memberikan informasi lengkap (destinasi + durasi + budget), buat itinerary dalam format JSON
-3. Untuk pertanyaan umum, jawab dengan bahasa Indonesia yang hangat dan informatif
+2. Ketika pengguna memberikan informasi lengkap (destinasi + durasi + budget), buat itinerary dalam format JSON.
+3. ATURAN MUTLAK: Untuk nama tempat wisata, restoran, dan hotel (`location`), kamu HANYA BOLEH menggunakan nama tempat yang secara eksplisit ada di bagian INFORMASI TAMBAHAN (Konteks RAG). DILARANG KERAS mengarang, berimajinasi, atau mengambil nama tempat dari luar dataset.
+4. Jika budget atau waktu masih sisa tetapi referensi tempat di dataset habis, lebih baik biarkan kosong/beri waktu istirahat daripada mengarang tempat palsu.
+5. Untuk pertanyaan umum, jawab dengan bahasa Indonesia yang hangat dan informatif.
 
 FORMAT RESPONS ITINERARY:
 Ketika membuat itinerary, HARUS dalam format JSON ini:

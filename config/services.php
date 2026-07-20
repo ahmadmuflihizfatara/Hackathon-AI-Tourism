@@ -27,10 +27,17 @@ return [
 
     // ── AI ─────────────────────────────────────────────────────────────────
 
-    'lmstudio' => [
-        'url' => env('LM_STUDIO_API_URL', 'http://localhost:1234/v1'),
-        'model' => env('LM_STUDIO_MODEL', 'gemma-4-e4b'),
-        'embedding_model' => env('LM_STUDIO_EMBEDDING_MODEL', 'bge-m3'),
+
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+        'embedding_model' => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-2'),
+    ],
+
+    'chromadb' => [
+        'url' => env('CHROMA_DB_URL', 'http://localhost:8000/api/v1'),
+        'collection' => env('CHROMA_DB_COLLECTION', 'tourism_gemini_db'),
     ],
 
     // ── Image APIs (fallback chain: Unsplash → Pexels → Wikimedia) ─────────

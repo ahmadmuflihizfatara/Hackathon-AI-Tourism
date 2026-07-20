@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\LmStudioService;
+use App\Services\GeminiApiService;
 use App\Services\RagService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Validator;
 class GeminiController extends Controller
 {
     public function __construct(
-        protected LmStudioService $lmService,
+        protected GeminiApiService $lmService,
         protected RagService $ragService
     ) {}
 

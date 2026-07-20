@@ -1,8 +1,8 @@
-# 🌴 NusantaraAI — Tourism Itinerary Planner (Local LLM / RAG Version)
+# 🌴 NusantaraAI — Tourism Itinerary Planner (Gemini API / RAG Version)
 
-Aplikasi web perencanaan wisata Indonesia berbasis AI menggunakan **Laravel 11**, **Blade**, **Tailwind CSS**, dan **Local LLM (LM Studio + Gemma 2 + BGE-M3 RAG)**.
+Aplikasi web perencanaan wisata Indonesia berbasis AI menggunakan **Laravel 11**, **Blade**, **Tailwind CSS**, dan **Gemini API**.
 
-Versi ini tidak lagi menggunakan Google Gemini API, melainkan berjalan secara lokal sepenuhnya (Local AI) menjaga privasi data, serta memanfaatkan teknologi *Retrieval-Augmented Generation* (RAG) untuk memberikan data tempat wisata yang lebih akurat sesuai dataset (XLSX).
+Aplikasi ini memanfaatkan teknologi *Retrieval-Augmented Generation* (RAG) untuk memberikan data tempat wisata yang lebih akurat sesuai dataset (XLSX).
 
 ---
 
@@ -12,10 +12,9 @@ Versi ini tidak lagi menggunakan Google Gemini API, melainkan berjalan secara lo
 |---|---|
 | **Framework** | Laravel 11 + Blade |
 | **CSS** | Tailwind CSS v3 + Vite |
-| **AI Backend** | LM Studio (Local LLM API) |
-| **LLM Model** | Gemma 4 (e4b) / Gemma 2 |
-| **Embedding Model**| BGE-M3 (BAAI) |
-| **Database RAG** | Database Relasional via Laravel |
+| **AI Backend** | Gemini API |
+| **LLM Model** | Gemini Pro |
+| **Database RAG** | Chroma DB (Vector Database) |
 | **Icons** | Google Material Icons Round |
 | **Warna Utama** | Terracotta `#C1602B` |
 
@@ -29,36 +28,40 @@ nusantaraai/
 │   ├── Console/Commands/
 │   │   └── IngestDatasetCommand.php ← Command untuk import dataset XLSX
 │   ├── Models/
-│   │   └── KnowledgeBase.php        ← Model untuk menyimpan vektor dataset
+│   │   └── KnowledgeBase.php        ← Model (bila masih ada untuk fallback)
 │   ├── Services/
-│   │   └── LmStudioService.php      ← Logika komunikasi ke LM Studio (Chat & Embedding)
+│   │   ├── GeminiService.php        ← Logika komunikasi ke Gemini API
+│   │   └── ChromaDbService.php      ← Logika integrasi ke Chroma DB
 ├── database/
 │   └── migrations/
-│       └── ...create_knowledge_bases_table.php ← Skema tabel vector RAG
+│       └── ...create_knowledge_bases_table.php ← Skema tabel vector RAG (lama)
 ├── storage/
-│   └── app/Storage/
-│       └── Dataset_Toba_Normalized.xlsx ← Dataset acuan RAG
+│   ├── app/Storage/
+│   │   └── Dataset_Toba_Normalized.xlsx ← Dataset acuan RAG
+│   └── chromadb/                    ← Folder penyimpan database vektor Chroma
 ```
 
 ---
 
 ## 🚀 Langkah-langkah Instalasi & Menjalankan Aplikasi
 
-Ikuti panduan berikut secara berurutan agar aplikasi dan Local LLM berjalan sinkron.
+Ikuti panduan berikut secara berurutan agar aplikasi berjalan dengan lancar.
 
-### Tahap 1: Persiapan Local LLM (LM Studio)
-1. **Download dan Install LM Studio** dari [https://lmstudio.ai/](https://lmstudio.ai/).
-2. Buka LM Studio, pergi ke kolom pencarian (Search).
-3. Cari dan download dua model berikut:
-   - **Gemma 4 e4b / Gemma 2** dengan format GGUF (sebagai model utama obrolan/reasoning).
-   - **BGE-M3** (sebagai model Text Embedding untuk vektor RAG).
-4. Masuk ke tab **Local Server** (ikon ↔️ di kiri).
-5. Load (muat) model Gemma pada slot Text/Chat Model.
-6. Pastikan kapabilitas Text Embeddings aktif dan Load model BGE-M3 (terutama jika menggunakan multi-model setup pada LM Studio terbaru).
-7. Klik tombol **Start Server**. Server API akan berjalan pada `http://127.0.0.1:1234/v1`.
+### Tahap 1: Persiapan Vector Database (Chroma DB)
+Chroma DB digunakan untuk menyimpan vektor embedding destinasi wisata.
+1. Pastikan kamu sudah menginstal **Python**.
+2. Buka terminal baru dan install library Chroma DB:
+   ```bash
+   pip install chromadb
+   ```
+3. Jalankan server lokal Chroma DB di port `8002` agar tidak bentrok dengan server Laravel:
+   ```bash
+   chroma run --path ./storage/chromadb --port 8002
+   ```
+   *(Biarkan terminal ini berjalan di background)*
 
 ### Tahap 2: Persiapan Aplikasi Laravel
-1. Buka terminal, masuk ke folder aplikasi:
+1. Buka terminal baru, masuk ke folder aplikasi:
    ```bash
    cd c:\xampp\htdocs\aitourism\itinerary-planner-tourism
    ```
@@ -69,18 +72,15 @@ Ikuti panduan berikut secara berurutan agar aplikasi dan Local LLM berjalan sink
    ```
 3. Sesuaikan konfigurasi di `.env`:
    ```env
-   # Ganti koneksi database sesuai environment (misal MySQL)
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=nama_database_kamu
-   DB_USERNAME=root
-   DB_PASSWORD=
+   # Ganti koneksi database sesuai environment (misal MySQL atau sqlite)
+   DB_CONNECTION=sqlite
 
-   # Konfigurasi LM Studio Local AI
-   LMSTUDIO_API_URL=http://127.0.0.1:1234/v1
-   LMSTUDIO_CHAT_MODEL=gemma-4-e4b
-   LMSTUDIO_EMBEDDING_MODEL=bge-m3
+   # Konfigurasi Gemini API
+   GEMINI_API_KEY="your-gemini-api-key-here"
+
+   # Konfigurasi Chroma DB
+   CHROMA_DB_URL="http://localhost:8002/api/v1"
+   CHROMA_DB_COLLECTION="tourism_knowledge_base"
    ```
 4. Jalankan Migrasi Database untuk membuat tabel-tabel termasuk tabel untuk Knowledge Base (vektor):
    ```bash
@@ -91,15 +91,16 @@ Ikuti panduan berikut secara berurutan agar aplikasi dan Local LLM berjalan sink
 Sistem ini menggunakan teknik *Retrieval-Augmented Generation* (RAG) untuk membaca dataset. Dataset dalam bentuk format Excel (`.xlsx`) perlu dikonversi ke vektor embedding agar relevansinya bisa dicari saat AI merancang itinerary.
 
 1. Pastikan file Excel tersedia di `app/Storage/Dataset_Toba_Normalized.xlsx` (atau ubah argumen sesuai lokasi aslinya).
-2. Jalankan perintah ingest (Terminal):
+2. Pastikan server **Chroma DB** (port 8002) sedang berjalan!
+3. Jalankan perintah ingest (Terminal Laravel):
    ```bash
    php artisan rag:ingest "app/Storage/Dataset_Toba_Normalized.xlsx"
    ```
-3. Proses ini akan membaca setiap baris Excel, mengirimkannya ke LM Studio untuk diubah menjadi *embedding vector*, lalu menyimpannya ke database. 
+4. Proses ini akan membaca setiap baris Excel, membuat vektor, lalu menyimpannya secara otomatis ke **Chroma DB**. 
    *(Tunggu hingga indikator progress 100% Selesai)*.
 
 ### Tahap 4: Menjalankan Frontend & Backend
-Aplikasi membutuhkan 2 terminal yang berjalan secara bersamaan.
+Aplikasi membutuhkan terminal Laravel dan Vite yang berjalan bersamaan.
 
 **Terminal 1 — Backend Laravel:**
 ```bash
@@ -114,7 +115,7 @@ npm run dev
 *(Server frontend akan me-reload CSS/JS secara live saat ada perubahan file Blade/CSS)*
 
 Buka browser kamu dan navigasi ke: **[http://localhost:8000](http://localhost:8000)**. 
-Selamat! Aplikasi NusantaraAI dengan AI lokal kini berjalan!
+Selamat! Aplikasi NusantaraAI kini berjalan!
 
 ---
 
@@ -124,13 +125,13 @@ Selamat! Aplikasi NusantaraAI dengan AI lokal kini berjalan!
 [User Input: "Buat itinerary wisata..."]
         │
         ▼
-1. Backend (LmStudioService) meng-generate 
+1. Backend meng-generate 
    "Embedding Vector" dari input user via 
-   LM Studio (menggunakan BGE-M3).
+   Gemini API.
         │
         ▼
-2. Vector Search (RAG): Mencari data di tabel
-   KnowledgeBase yang paling relevan (kosinus) 
+2. Vector Search (RAG): Mencari data di dalam
+   Chroma DB yang paling relevan (kosinus) 
    dengan pertanyaan user.
         │
         ▼
@@ -140,8 +141,7 @@ Selamat! Aplikasi NusantaraAI dengan AI lokal kini berjalan!
         │
         ▼
 4. Inference Chat: Mengirim prompt utuh yang 
-   sudah disuntikkan konteks ke LM Studio 
-   (Model Gemma).
+   sudah disuntikkan konteks ke Gemini API.
         │
         ▼
 5. Output JSON Itinerary diterima dan di-render 
@@ -156,15 +156,12 @@ Selamat! Aplikasi NusantaraAI dengan AI lokal kini berjalan!
 - **Penyebab**: Proses parsing XLSX besar memakan RAM (batas default PHP biasanya 128MB).
 - **Solusi**: Command `rag:ingest` sudah ditambahkan baris `ini_set('memory_limit', '-1')` agar batas memori terbuka. Pastikan tidak menghapus baris tersebut. Jika masih gagal, cek apakah file Excel memiliki ribuan row kosong yang ikut terbaca.
 
-### ❌ AI Tidak Merespons / "Maaf, terjadi kesalahan saat menghubungi AI Lokal"
-- **Solusi**: 
-  1. Pastikan tombol hijau **Start Server** di LM Studio menyala.
-  2. Pastikan port sesuai antara LM Studio (biasanya 1234) dengan variabel `LMSTUDIO_API_URL` di `.env`.
-  3. Buka `http://127.0.0.1:1234/v1/models` di browser. Jika memunculkan file JSON, berarti server lokal menyala.
+### ❌ AI Tidak Merespons
+- **Solusi**: Pastikan kunci API Gemini (`GEMINI_API_KEY`) di file `.env` sudah benar dan kuota API Anda masih tersedia.
 
 ### ❌ Itinerary Tidak Menggunakan Data dari Dataset
-- **Solusi**: Pastikan proses Ingestion (Tahap 3) sukses 100%. Pastikan LM Studio mengizinkan endpoint `/v1/embeddings` pada BGE-M3. Cek kembali `LmStudioService.php` apakah logika Vector Search RAG sudah digabungkan secara benar ke prompt sebelum dikirim ke chat completions.
+- **Solusi**: Pastikan proses Ingestion sukses 100%. Cek kembali logika controller apakah hasil Vector Search RAG sudah digabungkan secara benar ke prompt sebelum dikirim ke Gemini.
 
 ---
 
-Dibuat dengan ❤️ untuk **UI/UX Hackathon AI Tourism** 🌴 (Local LLM Edition)
+Dibuat dengan ❤️ untuk **UI/UX Hackathon AI Tourism** 🌴

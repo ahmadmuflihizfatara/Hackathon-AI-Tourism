@@ -65,21 +65,21 @@
 
         {{-- Quick suggestion chips --}}
         <div class="px-6 pb-3 flex flex-wrap gap-2" id="suggestion-chips">
-            <button onclick="fillSuggestion('Bali, 5 hari, budget Rp 3 juta')"
+            <button onclick="fillSuggestion('Samosir, 3 hari, budget Rp 2 juta')"
                     class="chip flex items-center gap-1 bg-stone-50 border border-stone-200 text-stone-600 text-xs px-3 py-1.5 rounded-full hover:border-terracotta hover:text-terracotta hover:bg-terracotta/5 transition-all">
-                <span class="material-icons-round text-sm">beach_access</span> Bali
+                <span class="material-icons-round text-sm">landscape</span> Samosir
             </button>
-            <button onclick="fillSuggestion('Yogyakarta, 3 hari, budget Rp 1.5 juta')"
+            <button onclick="fillSuggestion('Danau Toba, 2 hari, wisata alam')"
                     class="chip flex items-center gap-1 bg-stone-50 border border-stone-200 text-stone-600 text-xs px-3 py-1.5 rounded-full hover:border-terracotta hover:text-terracotta hover:bg-terracotta/5 transition-all">
-                <span class="material-icons-round text-sm">temple_hindu</span> Yogyakarta
+                <span class="material-icons-round text-sm">water</span> Danau Toba
             </button>
-            <button onclick="fillSuggestion('Raja Ampat, 7 hari, budget Rp 8 juta')"
+            <button onclick="fillSuggestion('Parapat, 4 hari, wisata keluarga')"
                     class="chip flex items-center gap-1 bg-stone-50 border border-stone-200 text-stone-600 text-xs px-3 py-1.5 rounded-full hover:border-terracotta hover:text-terracotta hover:bg-terracotta/5 transition-all">
-                <span class="material-icons-round text-sm">scuba_diving</span> Raja Ampat
+                <span class="material-icons-round text-sm">family_restroom</span> Parapat
             </button>
-            <button onclick="fillSuggestion('Labuan Bajo, 4 hari, budget Rp 5 juta')"
+            <button onclick="fillSuggestion('Balige, 3 hari, wisata budaya')"
                     class="chip flex items-center gap-1 bg-stone-50 border border-stone-200 text-stone-600 text-xs px-3 py-1.5 rounded-full hover:border-terracotta hover:text-terracotta hover:bg-terracotta/5 transition-all">
-                <span class="material-icons-round text-sm">kayaking</span> Labuan Bajo
+                <span class="material-icons-round text-sm">museum</span> Balige
             </button>
         </div>
 
@@ -89,7 +89,7 @@
                 <input
                     type="text"
                     id="landing-input"
-                    placeholder="Contoh: Saya mau ke Bali 5 hari dengan budget Rp 3 juta..."
+                    placeholder="Contoh: Saya mau ke Samosir 3 hari dengan budget Rp 2 juta..."
                     class="flex-1 bg-transparent text-sm text-stone-700 placeholder-stone-400 outline-none py-1"
                     autocomplete="off"
                 />
