@@ -21,6 +21,8 @@ class GeminiController extends Controller
      */
     public function chat(Request $request): JsonResponse
     {
+        Log::info('Gemini chat request payload', $request->all());
+
         $validator = Validator::make($request->all(), [
             'history'               => 'required|array|min:1',
             'history.*.role'        => 'required|in:user,model',
@@ -29,6 +31,10 @@ class GeminiController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::warning('Gemini chat validation failed', [
+                'payload' => $request->all(),
+                'errors' => $validator->errors()->toArray(),
+            ]);
             return response()->json([
                 'message' => 'Format percakapan tidak valid.',
                 'errors'  => $validator->errors(),

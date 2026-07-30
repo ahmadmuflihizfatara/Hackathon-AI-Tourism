@@ -24,6 +24,10 @@ class GeminiApiService
             return ['message' => 'API Key Gemini belum diatur di file .env (GEMINI_API_KEY).'];
         }
 
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
+        }
+
         $systemPrompt = $this->buildSystemPrompt();
         
         if (!empty($ragContext)) {
@@ -42,7 +46,8 @@ class GeminiApiService
         ];
 
         try {
-            $response = Http::timeout(60) // 60s is plenty for cloud APIs
+            $response = Http::timeout(120) // allow longer response time for Gemini
+                ->retry(2, 1000, throw: false)
                 ->withoutVerifying() // Bypass SSL error cURL 60 di XAMPP Windows
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", $payload);
 

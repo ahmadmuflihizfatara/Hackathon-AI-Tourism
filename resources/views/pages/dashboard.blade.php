@@ -214,6 +214,33 @@
                     </div>
                 </div>
 
+                <div id="itinerary-summary-panel" class="hidden p-5 space-y-4 bg-stone-50 border-b border-stone-100">
+                    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                        <div>
+                            <p class="text-amber-700 uppercase tracking-[0.24em] text-[10px] font-bold mb-1">Ringkasan Itinerary</p>
+                            <h3 class="text-2xl font-heading font-bold text-stone-800">Rencana perjalanan kamu</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[640px]">
+                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
+                                <p class="text-stone-400 mb-2">Lokasi</p>
+                                <p id="summary-location" class="font-semibold text-stone-800"></p>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
+                                <p class="text-stone-400 mb-2">Biaya</p>
+                                <p id="summary-budget" class="font-semibold text-stone-800"></p>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
+                                <p class="text-stone-400 mb-2">Waktu Berlibur</p>
+                                <p id="summary-duration" class="font-semibold text-stone-800"></p>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
+                                <p class="text-stone-400 mb-2">Tempat</p>
+                                <p id="summary-places" class="font-semibold text-stone-800"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Tabs: Itinerary / Budget / Tips / Rute / Aturan / Kendaraan --}}
                 <div class="bg-white border-b border-stone-100 px-4 overflow-x-auto flex-shrink-0">
                     <div class="flex gap-0 min-w-max">
@@ -233,7 +260,27 @@
 
                 {{-- Tab: Itinerary --}}
                 <div id="tab-itinerary" class="p-5 space-y-4 flex-shrink-0">
-                    {{-- Day cards injected by JS --}}
+                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
+                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Cuaca</p>
+                            <p id="widget-weather" class="text-sm font-semibold text-stone-800 leading-relaxed">Data cuaca akan muncul setelah itinerary dibuat.</p>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
+                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Detail Budget</p>
+                            <p id="widget-detail-budget" class="text-sm font-semibold text-stone-800 leading-relaxed">Estimasi lengkap tersedia di tab Budget.</p>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
+                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Checklist</p>
+                            <ul id="widget-checklist" class="mt-2 text-sm text-stone-600 space-y-2">
+                                <li>Checklist akan muncul setelah itinerary dibuat.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
+                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Catatan</p>
+                            <p id="widget-notes" class="text-sm font-semibold text-stone-800 leading-relaxed">Silakan tambahkan catatan khusus untuk perjalananmu.</p>
+                        </div>
+                    </div>
+                    <div id="day-cards" class="space-y-4"></div>
                 </div>
 
                 {{-- Tab: Budget --}}
@@ -251,9 +298,29 @@
                 </div>
 
                 {{-- Tab: Rute --}}
-                <div id="tab-rute" class="hidden p-5 space-y-4 flex-shrink-0">
-                    <div id="map-route" class="w-full h-[360px] rounded-2xl border border-stone-100"></div>
-                    <div id="route-summary" class="space-y-3"></div>
+                <div id="tab-rute" class="hidden p-5 flex flex-col gap-5">
+                    <div class="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-xs uppercase tracking-[0.24em] text-amber-700 font-bold">Rute dan Peta</p>
+                                    <h3 class="text-xl font-semibold text-stone-800">Perjalanan terencana</h3>
+                                </div>
+                                <button type="button" class="btn-secondary">
+                                    <span class="material-icons-round text-base">search</span>
+                                    Cari Kendaraan
+                                </button>
+                            </div>
+                            <div id="map-route" class="h-[420px] rounded-3xl border border-stone-100 overflow-hidden"></div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="bg-white rounded-3xl border border-stone-100 p-5">
+                                <p class="text-sm font-semibold text-stone-700 mb-3">Rute Harian</p>
+                                <div id="route-timeline" class="space-y-4 text-sm text-stone-600"></div>
+                            </div>
+                            <div id="route-summary" class="bg-white rounded-3xl border border-stone-100 p-5"></div>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Tab: Aturan Tempat Wisata --}}
@@ -300,6 +367,7 @@ let currentItinerary = null;
 const chatMessages   = document.getElementById('chat-messages');
 const chatForm       = document.getElementById('chat-form');
 const chatInput      = document.getElementById('chat-input');
+const kendaraanSearch = document.getElementById('kendaraan-search');
 const loadingOverlay = document.getElementById('loading-overlay');
 const emptyState     = document.getElementById('empty-state');
 const itineraryContent = document.getElementById('itinerary-content');
@@ -392,12 +460,27 @@ function renderItinerary(data) {
     document.getElementById('pill-duration').textContent    = `${data.days} Hari`;
     document.getElementById('pill-budget').textContent      = data.total_budget || '';
 
-    // Render day cards
-    const itineraryTab = document.getElementById('tab-itinerary');
-    itineraryTab.innerHTML = '';
-    (data.schedule || []).forEach((day, i) => {
-        itineraryTab.innerHTML += buildDayCard(day, i + 1);
-    });
+    const summaryPanel = document.getElementById('itinerary-summary-panel');
+    if (summaryPanel) {
+        summaryPanel.classList.remove('hidden');
+    }
+    document.getElementById('summary-location').textContent = data.destination || '—';
+    document.getElementById('summary-budget').textContent   = data.total_budget || 'Rp 0';
+    document.getElementById('summary-duration').textContent = `${data.days} Hari`;
+    document.getElementById('summary-places').textContent   = `${data.total_places || (data.schedule?.reduce((sum, day) => sum + (day.activities?.length || 0), 0)) || 0} Tempat`;
+
+    document.getElementById('widget-weather').textContent = data.weather_summary || 'Perkiraan cuaca dasar akan muncul setelah itinerary dibuat.';
+    document.getElementById('widget-detail-budget').textContent = data.budget_details || 'Estimasi lengkap tersedia di tab Budget.';
+    document.getElementById('widget-checklist').innerHTML = (data.checklist || ['Bawa pakaian nyaman', 'Siapkan uang tunai kecil', 'Isi daya ponsel']).map(item => `<li>• ${escapeHtml(item)}</li>`).join('');
+    document.getElementById('widget-notes').textContent = data.notes || 'Catatan khusus akan muncul di sini jika tersedia.';
+
+    const dayCards = document.getElementById('day-cards');
+    if (dayCards) {
+        dayCards.innerHTML = '';
+        (data.schedule || []).forEach((day, i) => {
+            dayCards.innerHTML += buildDayCard(day, i + 1);
+        });
+    }
 
     // Render budget
     renderBudget(data.budget || []);
@@ -409,7 +492,7 @@ function renderItinerary(data) {
     renderAturan(data.rules || data.aturan || []);
 
     // Render rekomendasi kendaraan
-    renderKendaraan(data.transportation || data.kendaraan || []);
+    setVehicleRecommendations(data.transportation || data.kendaraan || []);
 
     // ── Fetch Batch Images & Coordinates ──
     const places = [];
@@ -815,10 +898,29 @@ function getAturanIconColor(category) {
 // ── Render Rekomendasi Kendaraan ──────────────────────────────
 // Format item: { route/segment, vehicle_type, reason, road_condition,
 //                public_transport: { available, options: [{name, price_min, price_max, note}] } }
-function renderKendaraan(items) {
-    const container = document.getElementById('kendaraan-content');
-    if (!items || items.length === 0) {
-        container.innerHTML = `
+let currentVehicleRecommendations = [];
+
+function setVehicleRecommendations(items) {
+    currentVehicleRecommendations = Array.isArray(items) ? items : [];
+    renderKendaraanList(currentVehicleRecommendations);
+}
+
+function renderKendaraanList(items) {
+    const displayedItems = Array.isArray(items) ? items : [];
+    const availableCount = currentVehicleRecommendations.filter(item => !['dipakai','digunakan','in use','in-use','used'].includes((item.status || '').toLowerCase())).length;
+    const inUseCount = currentVehicleRecommendations.length - availableCount;
+
+    document.getElementById('vehicle-total')?.textContent = currentVehicleRecommendations.length;
+    document.getElementById('vehicle-available')?.textContent = availableCount;
+    document.getElementById('vehicle-in-use')?.textContent = inUseCount;
+
+    const listContainer = document.getElementById('kendaraan-list');
+    if (!listContainer) {
+        return;
+    }
+
+    if (!currentVehicleRecommendations.length) {
+        listContainer.innerHTML = `
             <div class="flex flex-col items-center justify-center py-12 px-4">
                 <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mb-3">
                     <span class="material-icons-round text-stone-300 text-3xl">directions_car</span>
@@ -836,50 +938,49 @@ function renderKendaraan(items) {
             </p>
         </div>`;
 
-    container.innerHTML = intro + items.map((item, idx) => {
-        const vehicleBadge = getVehicleBadge(item.vehicle_type);
+    listContainer.innerHTML = intro + displayedItems.map((item, idx) => {
+        const vehicleBadge = getVehicleBadge(item.vehicle_type || item.type || item.name);
         const pt = item.public_transport || {};
-        const hasPT = pt.available !== false && (pt.options || []).length > 0;
-        const roadBadge = getRoadBadge(item.road_condition);
-        
+        const hasPT = pt.available !== false && Array.isArray(pt.options) && pt.options.length > 0;
+        const roadBadge = getRoadBadge(item.road_condition || item.condition || '');
+
         return `
-        <div class="bg-white rounded-xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow">
-            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-stone-50 to-white border-b border-stone-100">
+        <div class="bg-white rounded-3xl border border-stone-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between gap-3 px-4 py-3 bg-stone-50 border-b border-stone-100">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div class="w-10 h-10 ${vehicleBadge.bgColor} rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
                         <span class="material-icons-round ${vehicleBadge.textColor} text-base">${vehicleBadge.icon}</span>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-stone-800 truncate">${item.segment || item.route || 'Perjalanan'}</p>
-                        <p class="text-xs text-stone-400">${vehicleBadge.label}</p>
+                        <p class="text-sm font-semibold text-stone-800 truncate">${escapeHtml(item.name || item.vehicle_type || item.type || item.segment || item.route || 'Kendaraan')}</p>
+                        <p class="text-xs text-stone-400">${escapeHtml(vehicleBadge.label)}</p>
                     </div>
                 </div>
-                ${item.road_condition ? `<span class="text-xs font-medium px-2.5 py-1 ${roadBadge.cls} rounded-full whitespace-nowrap flex-shrink-0">${roadBadge.label}</span>` : ''}
+                ${item.road_condition || item.condition ? `<span class="text-xs font-medium px-2.5 py-1 ${roadBadge.cls} rounded-full whitespace-nowrap flex-shrink-0">${roadBadge.label}</span>` : ''}
             </div>
-            
             <div class="px-4 py-3 space-y-3">
                 ${item.reason ? `
                 <div class="flex items-start gap-2">
                     <span class="material-icons-round text-stone-400 text-sm mt-0.5 flex-shrink-0">lightbulb</span>
-                    <p class="text-sm text-stone-600 leading-relaxed">${item.reason}</p>
+                    <p class="text-sm text-stone-600 leading-relaxed">${escapeHtml(item.reason)}</p>
                 </div>` : ''}
 
                 ${hasPT ? `
-                <div class="bg-gradient-to-br from-stone-50 to-stone-25 rounded-lg px-3.5 py-2.5 border border-stone-100">
+                <div class="bg-gradient-to-br from-stone-50 to-stone-25 rounded-xl px-3.5 py-2.5 border border-stone-100">
                     <p class="text-xs font-bold text-stone-600 uppercase tracking-wider mb-2.5 flex items-center gap-1">
                         <span class="material-icons-round text-sm text-stone-400">directions_bus</span>
                         Opsi Transportasi Umum / Sewa
                     </p>
                     <div class="space-y-2">
                         ${pt.options.map(o => `
-                            <div class="flex items-start justify-between gap-3 bg-white rounded-lg px-3 py-2 border border-stone-50">
+                            <div class="flex items-start justify-between gap-3 bg-white rounded-2xl px-3 py-2 border border-stone-50">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-stone-700 font-medium flex items-center gap-1.5">
                                         <span class="material-icons-round text-stone-400 text-sm">${o.icon || 'directions_bus'}</span>
-                                        ${o.name}
+                                        ${escapeHtml(o.name || 'Transportasi Umum')}
                                     </p>
-                                    ${o.duration ? `<p class="text-xs text-stone-400 mt-0.5">⏱ ${o.duration}</p>` : ''}
-                                    ${o.note ? `<p class="text-xs text-stone-400 mt-0.5">💡 ${o.note}</p>` : ''}
+                                    ${o.duration ? `<p class="text-xs text-stone-400 mt-0.5">⏱ ${escapeHtml(o.duration)}</p>` : ''}
+                                    ${o.note ? `<p class="text-xs text-stone-400 mt-0.5">💡 ${escapeHtml(o.note)}</p>` : ''}
                                 </div>
                                 <div class="text-right flex-shrink-0">
                                     <p class="text-sm font-semibold text-stone-800">${formatPriceRange(o.price_min, o.price_max)}</p>
@@ -888,16 +989,27 @@ function renderKendaraan(items) {
                         `).join('')}
                     </div>
                 </div>` : `
-                <div class="bg-amber-50 border border-amber-100 rounded-lg px-3.5 py-2.5">
+                <div class="bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-2.5">
                     <p class="text-xs text-amber-800 flex items-center gap-1.5">
                         <span class="material-icons-round text-amber-600 text-sm">warning</span>
-                        Kendaraan umum tidak langsung ke lokasi ini — disarankan sewa kendaraan pribadi atau jasa ojek lokal.
+                        Kendaraan umum terbatas, sebaiknya gunakan kendaraan pribadi atau sewa lokal.
                     </p>
                 </div>`}
             </div>
         </div>`;
     }).join('');
 }
+
+function filterKendaraan(query) {
+    if (!currentVehicleRecommendations.length) return;
+    const keyword = query?.trim().toLowerCase();
+    const filtered = keyword ? currentVehicleRecommendations.filter(item => {
+        const text = `${item.name || ''} ${item.vehicle_type || ''} ${item.type || ''} ${item.segment || ''} ${item.route || ''}`.toLowerCase();
+        return text.includes(keyword);
+    }) : currentVehicleRecommendations;
+    renderKendaraanList(filtered);
+}
+
 
 function getVehicleBadge(type) {
     const t = (type || '').toLowerCase();
@@ -1057,7 +1169,19 @@ function renderMap(data) {
         }
     }, 100);
 
-    // Render route summary list
+    // Render route summary list and timeline
+    const routeTimeline = document.getElementById('route-timeline');
+    if (routeTimeline) {
+        routeTimeline.innerHTML = (data.schedule || []).map((day, dayIndex) => {
+            const activities = (day.activities || []).map(act => `<p class="text-sm text-stone-600 leading-relaxed">${escapeHtml(act.time || '')} · <span class="font-medium text-stone-800">${escapeHtml(act.location || act.place || act.title || '')}</span></p>`).join('');
+            return `
+                <div class="rounded-2xl bg-stone-50 border border-stone-100 p-4">
+                    <p class="text-sm font-semibold text-stone-700 mb-2">Hari ${dayIndex + 1}</p>
+                    ${activities || '<p class="text-sm text-stone-500">Tidak ada detail kegiatan.</p>'}
+                </div>`;
+        }).join('');
+    }
+
     routeSummary.innerHTML = `
         <div class="bg-white/90 rounded-2xl border border-stone-100 p-4">
             <p class="text-sm font-semibold text-stone-700 mb-3">Rute Perjalanan</p>
@@ -1067,6 +1191,7 @@ function renderMap(data) {
         </div>
     `;
 }
+
 
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(name) {
@@ -1165,6 +1290,12 @@ function exportItinerary() {
 
 // ── Auto-load from URL query ──────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
+    if (kendaraanSearch) {
+        kendaraanSearch.addEventListener('input', function() {
+            filterKendaraan(this.value);
+        });
+    }
+
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     if (q) {
