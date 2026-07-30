@@ -795,10 +795,10 @@ function getIllustrationAccent(category) {
 const DAY_ACCENT_COLORS = ['#2D6A4F', '#004777', '#D4872E', '#B4691B', '#265C42', '#002B47'];
 
 function buildDayCard(day, dayNum) {
-    const dayColor = DAY_ACCENT_COLORS[(dayNum - 1) % DAY_ACCENT_COLORS.length];
+        const dayColor = '#2D6A4F';
     const acts = day.activities || [];
 
-    const tiles = acts.map((act) => {
+    const tiles = acts.map((act, idx) => {
         // Dukungan dua format:
         // Format BARU: { action, location, ... }  → tampil dua baris
         // Format LAMA: { place, ... }             → fallback satu baris (kompatibel mundur)
@@ -806,13 +806,17 @@ function buildDayCard(day, dayNum) {
         const displayLocation   = hasActionLocation ? act.location : (act.place || '');
         const displayAction     = hasActionLocation ? act.action   : null;
 
-        return `
-        <div class="bg-white rounded-2xl border border-stone-100 overflow-hidden flex hover:shadow-md transition-shadow">
+        const isFirst = idx === 0;
+
+        const cardHtml = `
+        <div class="bg-white w-[280px] sm:w-[320px] flex-shrink-0 snap-center rounded-2xl border border-stone-100 overflow-hidden flex hover:shadow-md transition-shadow">
+            ${isFirst ? `
             <div class="w-7 flex-shrink-0 flex items-center justify-center" style="background:${dayColor};">
                 <span class="text-white text-[10px] font-bold tracking-wide whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">Hari ${dayNum}</span>
             </div>
-            <div class="flex-1 min-w-0">
-                <div class="relative h-40 overflow-hidden" style="background:${getIllustrationAccent(act.category)};">
+            ` : ''}
+            <div class="flex-1 min-w-0 flex flex-col">
+                <div class="relative h-32 overflow-hidden" style="background:${getIllustrationAccent(act.category)};">
                     <img
                         data-place="${escapeHtml(displayLocation)}"
                         src="${getIllustrationSrc(act.category)}"
@@ -827,18 +831,24 @@ function buildDayCard(day, dayNum) {
                     <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
                         ${displayAction
                             ? `<p class="text-white/80 text-[10px] uppercase tracking-wider leading-tight">${displayAction}</p>
-                               <p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
-                            : `<p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
+                               <p class="text-white text-sm font-semibold truncate drop-shadow line-clamp-1">${displayLocation}</p>`
+                            : `<p class="text-white text-sm font-semibold truncate drop-shadow line-clamp-1">${displayLocation}</p>`
                         }
                         <p class="text-[9px] text-white/50 truncate hidden mt-0.5" data-credit-place="${escapeHtml(displayLocation)}"></p>
                     </div>
                 </div>
-                <div class="p-3.5">
-                    ${act.description ? `<p class="text-xs text-stone-500 leading-relaxed mb-2.5 line-clamp-2">${act.description}</p>` : ''}
-                    ${buildPriceBadge(act)}
+                <div class="p-3.5 flex-1 flex flex-col">
+                    ${act.description ? `<p class="text-[11px] text-stone-500 leading-relaxed mb-2.5 line-clamp-2 flex-1">${act.description}</p>` : '<div class="flex-1"></div>'}
+                    <div class="mt-auto">
+                        ${buildPriceBadge(act)}
+                    </div>
                 </div>
             </div>
         </div>`;
+
+        const connectorHtml = `<div class="h-1 w-6 sm:w-10 bg-stone-200 flex-shrink-0 self-center rounded-full"></div>`;
+
+        return isFirst ? cardHtml : connectorHtml + cardHtml;
     }).join('');
 
     const totalMin = acts.reduce((s, a) => s + (parseInt(a.harga_min) || 0), 0);
@@ -847,7 +857,7 @@ function buildDayCard(day, dayNum) {
 
     return `
         <div>
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-4 px-1">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:${dayColor};">
                         <span class="text-white text-xs font-bold font-heading">${dayNum}</span>
@@ -862,7 +872,15 @@ function buildDayCard(day, dayNum) {
                     <p class="text-xs text-stone-400">${acts.length} aktivitas</p>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${tiles}</div>
+            <div class="flex items-stretch overflow-x-auto pb-6 pt-2 snap-x snap-mandatory scroll-smooth px-1" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <style>
+                    /* Hides scrollbar for Chrome, Safari and Opera */
+                    .flex.overflow-x-auto::-webkit-scrollbar {
+                        display: none;
+                    }
+                </style>
+                ${tiles}
+            </div>
         </div>
     `;
 }
