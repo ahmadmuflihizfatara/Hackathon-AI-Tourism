@@ -192,21 +192,23 @@
             </div>
 
             {{-- Navigation Tabs --}}
-            <div class="flex gap-2 mb-6 border-b border-stone-200 pb-px overflow-x-auto">
-                <button onclick="switchTab('itinerary')" data-tab="itinerary" class="tab-btn active px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all bg-white text-primary border-t border-x border-stone-200 -mb-px shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+            <div class="flex border-b border-stone-200 mb-8 mx-1">
+                <button onclick="switchTab('itinerary')" data-tab="itinerary" class="flex-1 py-3.5 text-sm font-bold text-primary border-b-[3px] border-primary transition-all text-center">
                     Jadwal
                 </button>
-                <button onclick="switchTab('rute')" data-tab="rute" class="tab-btn px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all text-stone-500 hover:text-neutral-color hover:bg-white/50 border border-transparent -mb-px">
+                <button onclick="switchTab('rute')" data-tab="rute" class="flex-1 py-3.5 text-sm font-medium text-stone-400 border-b-[3px] border-transparent hover:text-stone-600 transition-all text-center">
                     Rute dan Peta
                 </button>
-                <button onclick="switchTab('kendaraan')" data-tab="kendaraan" class="tab-btn px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all text-stone-500 hover:text-neutral-color hover:bg-white/50 border border-transparent -mb-px">
+                <button onclick="switchTab('kendaraan')" data-tab="kendaraan" class="flex-1 py-3.5 text-sm font-medium text-stone-400 border-b-[3px] border-transparent hover:text-stone-600 transition-all text-center">
                     Kendaraan
                 </button>
                 
                 {{-- Hidden tabs from original codebase to prevent JS errors --}}
-                <button onclick="switchTab('budget')" data-tab="budget" class="tab-btn hidden">Budget</button>
-                <button onclick="switchTab('tips')" data-tab="tips" class="tab-btn hidden">Tips</button>
-                <button onclick="switchTab('aturan')" data-tab="aturan" class="tab-btn hidden">Aturan</button>
+                <div class="hidden">
+                    <button onclick="switchTab('budget')" data-tab="budget"></button>
+                    <button onclick="switchTab('tips')" data-tab="tips"></button>
+                    <button onclick="switchTab('aturan')" data-tab="aturan"></button>
+                </div>
             </div>
 
             {{-- Tab Content: Itinerary (Jadwal) --}}
@@ -1397,30 +1399,28 @@ function renderMap(data) {
 
 
 function switchTab(name) {
-    ['itinerary', 'budget', 'tips', 'rute', 'aturan', 'kendaraan'].forEach(tab => {
+    ['itinerary', 'rute', 'kendaraan'].forEach(tab => {
         const el = document.getElementById(`tab-${tab}`);
         const btn = document.querySelector(`[data-tab="${tab}"]`);
+        
         if (el) {
             if (tab === name) {
                 el.classList.remove('hidden');
+                el.classList.add('flex', 'flex-col');
                 if (btn) {
-                    btn.className = "tab-btn active px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all bg-white text-primary border-t border-x border-stone-200 -mb-px shadow-[0_-2px_10px_rgba(0,0,0,0.02)]";
+                    btn.className = "flex-1 py-3.5 text-sm font-bold text-primary border-b-[3px] border-primary transition-all text-center";
                 }
             } else {
                 el.classList.add('hidden');
+                el.classList.remove('flex', 'flex-col');
                 if (btn) {
-                    // if it's one of the hidden tabs, keep it hidden
-                    if (['budget', 'tips', 'aturan'].includes(tab)) {
-                        btn.className = "tab-btn hidden";
-                    } else {
-                        btn.className = "tab-btn px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all text-stone-500 hover:text-neutral-color hover:bg-white/50 border border-transparent -mb-px";
-                    }
+                    btn.className = "flex-1 py-3.5 text-sm font-medium text-stone-400 border-b-[3px] border-transparent hover:text-stone-600 transition-all text-center";
                 }
             }
         }
     });
 
-     if (name === 'rute' && window.routeMap) {
+    if (name === 'rute' && window.routeMap) {
         setTimeout(() => window.routeMap.invalidateSize(), 100);
     }
 }
