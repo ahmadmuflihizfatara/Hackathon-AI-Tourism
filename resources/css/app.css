@@ -3,17 +3,36 @@
 
 /* ================================================================
    NusantaraAI — Custom CSS
-   Primary: Terracotta (#C1602B)
+   Primary: Ocean Blue (#004777)
    Background: Warm Sand (#F5EFE6)
    Accent: Emerald Green (#3A7D5C)
    Heading: Poppins | Body: Open Sans
 ================================================================ */
 
+@theme {
+  --color-primary: #004777;
+  --color-primary-dark: #002B47;
+  --color-primary-light: #4D8AB1;
+  
+  --color-secondary: #2D6A4F;
+  --color-tertiary: #F4EBD0;
+  --color-neutral-color: #1A1C1E;
+  
+  --color-emerald: #3A7D5C;
+  --color-emerald-dark: #265C42;
+  --color-emerald-light: #B8DBCA;
+  
+  --color-amber: #D4872E;
+  --color-amber-dark: #B4691B;
+  
+  --color-warm-sand: #F5EFE6;
+}
+
 @layer base {
     :root {
-        --terracotta:      #C1602B;
-        --terracotta-dark: #9C4A1F;
-        --terracotta-light:#F4C9B0;
+        --primary:      #004777;
+        --primary-dark: #002B47;
+        --primary-light:#4D8AB1;
         --warm-sand:       #F5EFE6;
         --emerald:         #3A7D5C;
         --emerald-dark:    #265C42;
@@ -54,14 +73,14 @@
 @layer components {
     /* ── Buttons ─────────────────────────────────────────────── */
     .btn-primary {
-        @apply bg-terracotta text-white font-medium px-5 py-2.5 rounded-full
-               hover:bg-terracotta-dark transition-all duration-200
+        @apply bg-primary text-white font-medium px-5 py-2.5 rounded-full
+               hover:bg-primary-dark transition-all duration-200
                flex items-center gap-2 text-sm shadow-warm;
     }
 
     .btn-secondary {
-        @apply border border-terracotta/30 text-terracotta font-medium px-5 py-2.5
-               rounded-full hover:bg-terracotta/5 transition-all duration-200
+        @apply border border-primary/30 text-primary font-medium px-5 py-2.5
+               rounded-full hover:bg-primary/5 transition-all duration-200
                flex items-center gap-2 text-sm;
     }
 
@@ -84,7 +103,7 @@
     .input-base {
         @apply w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5
                text-sm text-stone-700 placeholder-stone-400
-               focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta
+               focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
                transition-all duration-200;
     }
 
@@ -93,8 +112,8 @@
         @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full;
     }
 
-    .badge-terracotta {
-        @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-terracotta/10 text-terracotta;
+    .badge-primary {
+        @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary;
     }
 
     .badge-emerald {
@@ -107,7 +126,7 @@
 
     /* ── Section headings ────────────────────────────────────── */
     .section-eyebrow {
-        @apply text-terracotta text-xs font-semibold tracking-widest uppercase;
+        @apply text-primary text-xs font-semibold tracking-widest uppercase;
     }
 
     .section-title {
@@ -121,24 +140,24 @@
     }
 
     .bubble-user {
-        @apply bg-terracotta text-white rounded-2xl rounded-tr-sm px-4 py-3
+        @apply bg-primary text-white rounded-2xl rounded-tr-sm px-4 py-3
                text-sm leading-relaxed max-w-[260px];
     }
 
     /* ── Itinerary day card ───────────────────────────────────── */
     .day-card {
         @apply bg-white rounded-2xl border border-stone-100 overflow-hidden
-               hover:border-terracotta/20 transition-all duration-200;
+               hover:border-primary/20 transition-all duration-200;
     }
 
     /* ── Tab button ──────────────────────────────────────────── */
     .tab-active {
-        @apply border-b-2 border-terracotta text-terracotta;
+        @apply border-b-2 border-primary text-primary;
     }
 
     /* ── Gradient text ───────────────────────────────────────── */
     .text-gradient {
-        background: linear-gradient(135deg, var(--terracotta) 0%, #E07844 100%);
+        background: linear-gradient(135deg, var(--primary) 0%, #E07844 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;

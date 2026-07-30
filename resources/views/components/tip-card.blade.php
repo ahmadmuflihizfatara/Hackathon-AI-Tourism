@@ -9,7 +9,7 @@
 $colorMap = [
     'amber'      => ['bg' => 'bg-amber-50',      'text' => 'text-amber-500'],
     'emerald'    => ['bg' => 'bg-emerald/10',    'text' => 'text-emerald'],
-    'terracotta' => ['bg' => 'bg-terracotta/10', 'text' => 'text-terracotta'],
+    'primary' => ['bg' => 'bg-primary/10', 'text' => 'text-primary'],
 ];
 $style = $colorMap[$color] ?? $colorMap['amber'];
 @endphp

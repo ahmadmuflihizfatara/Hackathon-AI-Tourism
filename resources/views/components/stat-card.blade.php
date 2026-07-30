@@ -2,7 +2,7 @@
     'icon'  => 'info',
     'label' => '',
     'value' => '',
-    'color' => 'terracotta',
+    'color' => 'primary',
 ])
 
 <div class="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2.5 text-center flex-1">

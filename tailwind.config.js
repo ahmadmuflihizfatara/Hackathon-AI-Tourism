@@ -13,40 +13,39 @@ export default {
         extend: {
             // ── Custom Color Palette ─────────────────────────────────────
             colors: {
-                // Terracotta (primary)
-                'terracotta': {
-                    DEFAULT: '#C1602B',
-                    light:   '#F4C9B0',
-                    dark:    '#9C4A1F',
+                'primary': {
+                    DEFAULT: '#004777',
+                    dark: '#002B47',
+                    light: '#4D8AB1',
                 },
-
-                // Warm Sand (background)
+                'secondary': '#2D6A4F',
+                'tertiary': '#F4EBD0',
+                'neutral-color': '#1A1C1E',
+                
+                // Restored old colors
+                'emerald': {
+                    DEFAULT: '#3A7D5C',
+                    dark:    '#265C42',
+                    light:   '#B8DBCA',
+                },
+                'amber': {
+                    DEFAULT: '#D4872E',
+                    dark: '#B4691B',
+                },
+                
+                // Warm Sand (background - keeping for safety but we'll use white/gray)
                 'warm-sand': {
                     DEFAULT: '#F5EFE6',
                     light:   '#FAF7F2',
                     dark:    '#EDE3D6',
                 },
-
-                // Emerald Green (accent)
-                'emerald': {
-                    DEFAULT: '#3A7D5C',
-                    light:   '#B8DBCA',
-                    dark:    '#265C42',
-                },
-
-                // Amber (secondary accent for budget/tips)
-                'amber': {
-                    DEFAULT: '#D4872E',
-                    light:   '#F5D9B0',
-                    dark:    '#A86420',
-                },
             },
 
             // ── Typography ───────────────────────────────────────────────
             fontFamily: {
-                heading: ['Poppins', ...defaultTheme.fontFamily.sans],
-                body:    ['Open Sans', ...defaultTheme.fontFamily.sans],
-                sans:    ['Open Sans', ...defaultTheme.fontFamily.sans],
+                heading: ['Montserrat', ...defaultTheme.fontFamily.sans],
+                body:    ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+                sans:    ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
             },
 
             // ── Border Radius ────────────────────────────────────────────
@@ -57,7 +56,7 @@ export default {
 
             // ── Box Shadow ───────────────────────────────────────────────
             boxShadow: {
-                'terracotta': '0 4px 24px -4px rgba(193, 96, 43, 0.15)',
+                'primary': '0 4px 24px -4px rgba(193, 96, 43, 0.15)',
                 'emerald':    '0 4px 24px -4px rgba(58, 125, 92, 0.12)',
                 'warm':       '0 2px 16px -2px rgba(193, 96, 43, 0.08)',
             },

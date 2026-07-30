@@ -24,7 +24,7 @@ $icon = $icons[strtolower($category)] ?? $icons['default'];
 
 <div class="flex gap-3 py-3 {{ $isLast ? '' : 'border-b border-stone-100' }}">
     <div class="text-center w-14 flex-shrink-0 pt-0.5">
-        <p class="text-xs font-semibold text-terracotta">{{ $time }}</p>
+        <p class="text-xs font-semibold text-primary">{{ $time }}</p>
         @if(!$isLast)
             <span class="inline-block w-0.5 h-6 bg-stone-200 mx-auto mt-1"></span>
         @endif

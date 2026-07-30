@@ -40,317 +40,358 @@
         display: none !important;
     }
 
-    /* Print color adjustment for terracotta elements */
+    /* Print color adjustment for primary elements */
     .bg-white {
         background-color: #fff !important;
         border: 1px solid #e5e7eb !important;
     }
     
     .text-stone-800 {
-        color: #1f2937 !important;
+        color: #1A1C1E !important;
     }
     
-    .bg-terracotta {
-        background-color: #c2410c !important;
+    .bg-primary {
+        background-color: #004777 !important;
         color: white !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
 }
+
+/* Reliable toggle state for the left/right panels, independent of the
+   responsive hidden/md:flex pair used for the initial mobile/desktop state. */
+.force-hidden {
+    display: none !important;
+}
 </style>
 
-<div class="flex flex-col h-screen overflow-hidden">
+<div class="flex h-screen overflow-hidden bg-slate-50 font-sans text-neutral-color">
 
-    {{-- ========== TOP NAV ========== --}}
-    <nav class="flex-shrink-0 bg-white border-b border-stone-100 px-4 py-2.5 flex items-center justify-between z-10">
-        <a href="{{ route('landing') }}" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <span class="material-icons-round text-terracotta">travel_explore</span>
-            <span class="font-heading font-bold text-lg text-stone-800">Nusantara<span class="text-terracotta">AI</span></span>
-        </a>
-
-        {{-- Trip summary pill --}}
-        <div id="trip-summary-pill" class="hidden items-center gap-3 bg-stone-50 border border-stone-200 rounded-full px-4 py-1.5 text-sm">
-            <span class="flex items-center gap-1 text-stone-600">
-                <span class="material-icons-round text-base text-terracotta">location_on</span>
-                <span id="pill-destination">—</span>
-            </span>
-            <span class="text-stone-300">|</span>
-            <span class="flex items-center gap-1 text-stone-600">
-                <span class="material-icons-round text-base text-terracotta">schedule</span>
-                <span id="pill-duration">—</span>
-            </span>
-            <span class="text-stone-300">|</span>
-            <span class="flex items-center gap-1 text-stone-600">
-                <span class="material-icons-round text-base text-emerald">payments</span>
-                <span id="pill-budget">—</span>
-            </span>
+    {{-- ========== LEFT COLUMN: Sidebar ========== --}}
+    <aside id="left-sidebar" class="w-[260px] md:w-[280px] bg-white border-r border-stone-200 hidden md:flex flex-col shrink-0 z-20 transition-all duration-300">
+        {{-- Logo & App Name --}}
+        <div class="px-6 py-5 border-b border-stone-100">
+            <a href="{{ route('landing') }}" class="flex flex-col gap-0.5 hover:opacity-80 transition-opacity">
+                <h1 class="font-heading font-extrabold text-xl text-primary tracking-tight">Toba <span class="text-secondary">Itinerary</span></h1>
+                <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Asisten Itinerary</p>
+            </a>
         </div>
 
-        <div class="flex items-center gap-2">
-            <button id="btn-export"
-                    onclick="exportItinerary()"
-                    class="hidden items-center gap-1 border border-stone-200 text-stone-600 text-sm px-3 py-1.5 rounded-lg hover:border-terracotta hover:text-terracotta transition-all">
-                <span class="material-icons-round text-base">download</span>
-                Ekspor PDF
-            </button>
-            <button onclick="resetChat()"
-                    class="flex items-center gap-1 text-stone-400 text-sm px-3 py-1.5 rounded-lg hover:text-stone-700 hover:bg-stone-50 transition-all">
-                <span class="material-icons-round text-base">refresh</span>
-                Mulai Ulang
+        {{-- New Itinerary Button --}}
+        <div class="px-5 py-5">
+            <button onclick="resetChat()" class="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20">
+                <span class="material-icons-round text-[18px]">add</span>
+                Itinerary Baru
             </button>
         </div>
-    </nav>
 
-    {{-- ========== TWO-COLUMN MAIN ========== --}}
-    <main class="flex-1 flex overflow-hidden">
+        {{-- Navigation Menu --}}
+        <div class="px-3 py-2 space-y-1">
+            <a href="{{ route('landing') }}" class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-primary rounded-xl transition-colors group">
+                <span class="material-icons-round text-stone-400 group-hover:text-primary transition-colors text-[20px]">home</span>
+                Home
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-primary rounded-xl transition-colors group">
+                <span class="material-icons-round text-stone-400 group-hover:text-primary transition-colors text-[20px]">bookmark_border</span>
+                Itinerary Disimpan
+            </a>
+        </div>
 
-        {{-- ── LEFT COLUMN: Chatbot ──────────────────────────────────── --}}
-        <aside class="w-full md:w-[420px] flex-shrink-0 flex flex-col border-r border-stone-100 bg-white">
+        {{-- History Section --}}
+        <div class="flex-1 overflow-y-auto px-3 py-4 mt-2">
+            <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-3">Riwayat Itinerary</p>
+            <div id="history-list" class="space-y-1.5">
+                <p class="text-xs text-stone-400 px-4 py-2">Belum ada riwayat percakapan.</p>
+            </div>
+        </div>
 
-            {{-- Column header --}}
-            <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100">
-                <div class="w-7 h-7 bg-terracotta rounded-lg flex items-center justify-center">
-                    <span class="material-icons-round text-white text-sm">smart_toy</span>
+        {{-- Settings Button --}}
+        <div class="p-4 border-t border-stone-100">
+            <button class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 rounded-xl transition-colors group">
+                <span class="material-icons-round text-stone-400 group-hover:text-stone-600 text-[20px]">settings</span>
+                Settings
+            </button>
+        </div>
+    </aside>
+
+    {{-- ========== MIDDLE COLUMN: Itinerary Results ========== --}}
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-50 relative z-10">
+        
+        {{-- Mobile Header (shows only on small screens) --}}
+        <nav class="md:hidden flex-shrink-0 bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between z-10">
+            <h1 class="font-heading font-extrabold text-lg text-primary tracking-tight">Toba <span class="text-secondary">Itinerary</span></h1>
+            <button onclick="toggleMobileSidebar()" class="text-stone-600"><span class="material-icons-round">menu</span></button>
+        </nav>
+
+        {{-- Action Buttons (Export/Reset/Toggles) --}}
+        <div class="absolute top-4 left-4 z-20 flex gap-2">
+            <button onclick="toggleLeftSidebar()" class="hidden md:flex items-center justify-center bg-white border border-stone-200 text-stone-600 w-9 h-9 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
+                <span class="material-icons-round text-[18px]">menu_open</span>
+            </button>
+        </div>
+        <div class="absolute top-4 right-6 z-20 flex gap-2">
+            <button id="btn-export" onclick="exportItinerary()" class="hidden items-center gap-1.5 bg-white border border-stone-200 text-stone-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
+                <span class="material-icons-round text-[16px]">download</span> Ekspor
+            </button>
+            <button onclick="toggleRightSidebar()" class="hidden md:flex items-center justify-center bg-white border border-stone-200 text-stone-600 w-9 h-9 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
+                <span class="material-icons-round text-[18px]">chat</span>
+            </button>
+        </div>
+
+        {{-- Empty state (shown before itinerary loads) --}}
+        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50">
+            <div class="w-24 h-24 bg-white rounded-[2rem] shadow-sm flex items-center justify-center mb-6 border border-stone-100 relative overflow-hidden">
+                <div class="absolute inset-0 bg-primary/5"></div>
+                <span class="material-icons-round text-primary text-5xl relative z-10">explore</span>
+            </div>
+            <h3 class="font-heading font-extrabold text-neutral-color text-2xl mb-3">Belum ada Itinerary</h3>
+            <p class="text-stone-500 text-sm max-w-sm leading-relaxed">
+                Silakan mulai percakapan dengan AI Assistant di sebelah kanan untuk merencanakan liburan impian Anda.
+            </p>
+        </div>
+
+        {{-- Itinerary content (hidden until generated) --}}
+        <div id="itinerary-content" class="hidden flex-1 overflow-y-auto p-4 md:p-8">
+            
+            {{-- Header Stats --}}
+            <div class="bg-white rounded-2xl border border-stone-200 shadow-sm shadow-stone-200/50 p-6 mb-6">
+                <h2 class="font-heading font-extrabold text-2xl text-neutral-color mb-6 flex items-center gap-2">
+                    Ringkasan Itinerary
+                </h2>
+                
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
+                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Lokasi</p>
+                        <p id="summary-location" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
+                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Biaya</p>
+                        <p id="summary-budget" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
+                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Waktu Berlibur</p>
+                        <p id="summary-duration" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
+                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Total Tempat</p>
+                        <p id="summary-places" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+                    </div>
                 </div>
-                <span class="font-heading font-semibold text-stone-700 text-sm">Asisten AI</span>
-                <span id="ai-status" class="ml-auto flex items-center gap-1 text-xs text-emerald">
-                    <span class="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse"></span>
-                    Online
-                </span>
+
+                {{-- Hidden elements to keep JS parsing happy --}}
+                <div class="hidden">
+                    <span id="dest-name"></span>
+                    <span id="dest-province"></span>
+                    <span id="stat-duration"></span>
+                    <span id="stat-budget"></span>
+                    <span id="stat-places"></span>
+                    <span id="pill-destination"></span>
+                    <span id="pill-duration"></span>
+                    <span id="pill-budget"></span>
+                </div>
             </div>
 
-            {{-- Messages --}}
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-5 space-y-4 scroll-smooth">
-                {{-- Initial AI greeting --}}
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
-                        <span class="material-icons-round text-white text-base">smart_toy</span>
+            {{-- Navigation Tabs --}}
+            <div class="flex gap-2 mb-6 border-b border-stone-200 pb-px overflow-x-auto">
+                <button onclick="switchTab('itinerary')" data-tab="itinerary" class="tab-btn active px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all bg-white text-primary border-t border-x border-stone-200 -mb-px shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+                    Jadwal
+                </button>
+                <button onclick="switchTab('rute')" data-tab="rute" class="tab-btn px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all text-stone-500 hover:text-neutral-color hover:bg-white/50 border border-transparent -mb-px">
+                    Rute dan Peta
+                </button>
+                <button onclick="switchTab('kendaraan')" data-tab="kendaraan" class="tab-btn px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all text-stone-500 hover:text-neutral-color hover:bg-white/50 border border-transparent -mb-px">
+                    Kendaraan
+                </button>
+                
+                {{-- Hidden tabs from original codebase to prevent JS errors --}}
+                <button onclick="switchTab('budget')" data-tab="budget" class="tab-btn hidden">Budget</button>
+                <button onclick="switchTab('tips')" data-tab="tips" class="tab-btn hidden">Tips</button>
+                <button onclick="switchTab('aturan')" data-tab="aturan" class="tab-btn hidden">Aturan</button>
+            </div>
+
+            {{-- Tab Content: Itinerary (Jadwal) --}}
+            <div id="tab-itinerary" class="space-y-8">
+                <div id="day-cards" class="space-y-6"></div>
+                
+                {{-- Mini Widgets Grid (moved below schedule) --}}
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 pt-6 border-t border-stone-200">
+                    <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-icons-round text-primary text-[18px]">wb_sunny</span>
+                            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Cuaca</p>
+                        </div>
+                        <p id="widget-weather" class="text-sm font-semibold text-neutral-color leading-relaxed"></p>
                     </div>
-                    <div class="bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[280px]">
-                        <p class="text-sm text-stone-700 leading-relaxed">
-                            Halo! Saya siap merencanakan wisata impianmu 🌴<br><br>
-                            Ceritakan tujuanmu — misalnya: <em>"Mau ke Lombok 5 hari dengan budget Rp 4 juta, suka wisata alam dan pantai"</em>
-                        </p>
+                    <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-icons-round text-primary text-[18px]">account_balance_wallet</span>
+                            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Detail Budget</p>
+                        </div>
+                        <p id="widget-detail-budget" class="text-sm font-semibold text-neutral-color leading-relaxed"></p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-icons-round text-primary text-[18px]">checklist</span>
+                            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Checklist</p>
+                        </div>
+                        <ul id="widget-checklist" class="text-sm font-medium text-stone-600 space-y-1.5 ml-1"></ul>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-icons-round text-primary text-[18px]">sticky_note_2</span>
+                            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Catatan AI</p>
+                        </div>
+                        <p id="widget-notes" class="text-sm font-medium text-stone-600 leading-relaxed"></p>
                     </div>
                 </div>
             </div>
 
-            {{-- ── Chat Input ── --}}
-            <div class="p-4 border-t border-stone-100 bg-white">
-                <form id="chat-form" class="flex items-end gap-2">
-                    <div class="flex-1 bg-stone-50 border border-stone-200 rounded-2xl px-4 py-2.5 focus-within:border-terracotta focus-within:ring-2 focus-within:ring-terracotta/10 transition-all">
-                        <textarea
-                            id="chat-input"
-                            rows="1"
-                            placeholder="Ketik pesan atau pertanyaan..."
-                            class="w-full bg-transparent text-sm text-stone-700 placeholder-stone-400 outline-none resize-none leading-relaxed max-h-32"
-                            style="overflow-y: hidden;"
-                        ></textarea>
+            {{-- Tab Content: Rute --}}
+            <div id="tab-rute" class="hidden flex flex-col gap-6">
+                <div class="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+                    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-2 flex flex-col h-[500px]">
+                        <div id="map-route" class="flex-1 rounded-xl overflow-hidden z-0"></div>
                     </div>
-                    <button type="submit"
-                            id="send-btn"
-                            class="w-10 h-10 bg-terracotta rounded-xl flex items-center justify-center hover:bg-terracotta-dark transition-colors flex-shrink-0 disabled:opacity-50">
-                        <span class="material-icons-round text-white">send</span>
-                    </button>
-                </form>
-                <p class="text-center text-xs text-stone-300 mt-2">Didukung Gemma & LM Studio (Local LLM)</p>
-            </div>
-        </aside>
-
-        {{-- ── RIGHT COLUMN: Itinerary Results ─────────────────────── --}}
-        <section id="right-panel" class="hidden md:flex flex-col flex-1 bg-warm-sand overflow-hidden">
-
-            {{-- Empty state (shown before itinerary loads) --}}
-            <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div class="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-5 border border-stone-100">
-                    <span class="material-icons-round text-terracotta text-4xl">explore</span>
-                </div>
-                <h3 class="font-heading font-semibold text-stone-700 text-xl mb-2">Itinerary Akan Tampil di Sini</h3>
-                <p class="text-stone-400 text-sm max-w-xs leading-relaxed">
-                    Mulai chat dengan AI di sebelah kiri untuk mendapatkan rencana perjalanan personalmu.
-                </p>
-                <div class="mt-8 grid grid-cols-3 gap-3 w-full max-w-sm">
-                    @foreach(['Wisata Alam', 'Budaya & Sejarah', 'Kuliner', 'Pantai & Laut', 'Kota', 'Petualangan'] as $cat)
-                    <div class="bg-white rounded-xl p-3 text-center border border-stone-100">
-                        <span class="text-xs text-stone-500">{{ $cat }}</span>
+                    <div class="flex flex-col gap-6">
+                        <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 flex-1 max-h-[500px] overflow-y-auto">
+                            <h3 class="font-heading font-extrabold text-neutral-color mb-5">Rute Harian</h3>
+                            <div id="route-timeline" class="space-y-4 text-sm text-stone-600"></div>
+                        </div>
+                        <div id="route-summary" class="hidden"></div>
                     </div>
-                    @endforeach
                 </div>
             </div>
 
-            {{-- Itinerary content (hidden until generated) --}}
-            <div id="itinerary-content" class="hidden flex-1 overflow-y-auto">
-
-                {{-- Destination Header --}}
-                <div id="destination-header" class="relative bg-terracotta px-6 pt-8 pb-6 overflow-hidden">
-                    <div class="absolute inset-0 opacity-10">
-                        <div class="absolute top-0 right-0 w-48 h-48 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                        <div class="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+            {{-- Tab Content: Kendaraan --}}
+            <div id="tab-kendaraan" class="hidden space-y-6">
+                {{-- Search & Stats Header --}}
+                <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <h3 class="font-heading font-extrabold text-neutral-color text-xl">Transportasi</h3>
+                        <div class="relative w-full md:w-72">
+                            <input type="text" id="kendaraan-search" placeholder="Cari Kendaraan..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-stone-200 rounded-xl text-sm font-medium text-stone-700 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+                            <span class="material-icons-round text-stone-400 absolute left-3 top-2.5 text-[20px]">search</span>
+                        </div>
                     </div>
-                    <div class="relative">
-                        <div class="flex items-start justify-between mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="border border-stone-200 rounded-xl p-4 flex items-center justify-between group hover:border-primary/20 transition-colors">
                             <div>
-                                <p class="text-terracotta-light text-xs font-semibold uppercase tracking-widest mb-1">Destinasi Wisata</p>
-                                <h2 id="dest-name" class="font-heading font-bold text-white text-3xl"></h2>
-                                <p id="dest-province" class="text-white/70 text-sm mt-1"></p>
+                                <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1">Total Kendaraan</p>
+                                <p id="vehicle-total" class="font-heading font-extrabold text-3xl text-neutral-color">0</p>
                             </div>
-                            <span class="material-icons-round text-white/30 text-6xl">travel_explore</span>
-                        </div>
-                        {{-- Stats row --}}
-                        <div class="flex gap-4 mt-4">
-                            <div class="bg-white/15 rounded-xl px-4 py-2.5 text-center flex-1">
-                                <p class="text-white/70 text-xs mb-1">Durasi</p>
-                                <p id="stat-duration" class="text-white font-heading font-bold text-lg"></p>
-                            </div>
-                            <div class="bg-white/15 rounded-xl px-4 py-2.5 text-center flex-1">
-                                <p class="text-white/70 text-xs mb-1">Est. Budget</p>
-                                <p id="stat-budget" class="text-white font-heading font-bold text-lg"></p>
-                            </div>
-                            <div class="bg-white/15 rounded-xl px-4 py-2.5 text-center flex-1">
-                                <p class="text-white/70 text-xs mb-1">Lokasi</p>
-                                <p id="stat-places" class="text-white font-heading font-bold text-lg"></p>
+                            <div class="w-12 h-12 rounded-full bg-slate-50 text-stone-400 flex items-center justify-center">
+                                <span class="material-icons-round text-[24px]">directions_car</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div id="itinerary-summary-panel" class="hidden p-5 space-y-4 bg-stone-50 border-b border-stone-100">
-                    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                        <div>
-                            <p class="text-amber-700 uppercase tracking-[0.24em] text-[10px] font-bold mb-1">Ringkasan Itinerary</p>
-                            <h3 class="text-2xl font-heading font-bold text-stone-800">Rencana perjalanan kamu</h3>
+                        <div class="border border-stone-200 rounded-xl p-4 flex items-center justify-between group hover:border-secondary/30 transition-colors">
+                            <div>
+                                <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1">Tersedia</p>
+                                <p id="vehicle-available" class="font-heading font-extrabold text-3xl text-neutral-color">0</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-secondary/10 text-secondary flex items-center justify-center">
+                                <span class="material-icons-round text-[24px]">check_circle</span>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[640px]">
-                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
-                                <p class="text-stone-400 mb-2">Lokasi</p>
-                                <p id="summary-location" class="font-semibold text-stone-800"></p>
+                        <div class="border border-stone-200 rounded-xl p-4 flex items-center justify-between group hover:border-amber-500/30 transition-colors">
+                            <div>
+                                <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1">Digunakan</p>
+                                <p id="vehicle-in-use" class="font-heading font-extrabold text-3xl text-neutral-color">0</p>
                             </div>
-                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
-                                <p class="text-stone-400 mb-2">Biaya</p>
-                                <p id="summary-budget" class="font-semibold text-stone-800"></p>
-                            </div>
-                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
-                                <p class="text-stone-400 mb-2">Waktu Berlibur</p>
-                                <p id="summary-duration" class="font-semibold text-stone-800"></p>
-                            </div>
-                            <div class="bg-white rounded-2xl border border-stone-200 p-4 text-sm">
-                                <p class="text-stone-400 mb-2">Tempat</p>
-                                <p id="summary-places" class="font-semibold text-stone-800"></p>
+                            <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center">
+                                <span class="material-icons-round text-[24px]">timelapse</span>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {{-- Tabs: Itinerary / Budget / Tips / Rute / Aturan / Kendaraan --}}
-                <div class="bg-white border-b border-stone-100 px-4 overflow-x-auto flex-shrink-0">
-                    <div class="flex gap-0 min-w-max">
-                        @foreach(['itinerary' => 'Jadwal', 'budget' => 'Budget', 'tips' => 'Tips', 'rute' => 'Rute', 'aturan' => 'Aturan', 'kendaraan' => 'Kendaraan'] as $tab => $label)
-                        <button onclick="switchTab('{{ $tab }}')"
-                                data-tab="{{ $tab }}"
-                                class="tab-btn flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap
-                                       {{ $tab === 'itinerary' ? 'border-terracotta text-terracotta' : 'border-transparent text-stone-400 hover:text-stone-600' }}">
-                            <span class="material-icons-round text-base">
-                                {{ $tab === 'itinerary' ? 'calendar_today' : ($tab === 'budget' ? 'payments' : ($tab === 'tips' ? 'lightbulb' : ($tab === 'rute' ? 'route' : ($tab === 'aturan' ? 'gavel' : 'directions_car')))) }}
-                            </span>
-                            {{ $label }}
-                        </button>
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- Tab: Itinerary --}}
-                <div id="tab-itinerary" class="p-5 space-y-4 flex-shrink-0">
-                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
-                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Cuaca</p>
-                            <p id="widget-weather" class="text-sm font-semibold text-stone-800 leading-relaxed">Data cuaca akan muncul setelah itinerary dibuat.</p>
-                        </div>
-                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
-                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Detail Budget</p>
-                            <p id="widget-detail-budget" class="text-sm font-semibold text-stone-800 leading-relaxed">Estimasi lengkap tersedia di tab Budget.</p>
-                        </div>
-                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
-                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Checklist</p>
-                            <ul id="widget-checklist" class="mt-2 text-sm text-stone-600 space-y-2">
-                                <li>Checklist akan muncul setelah itinerary dibuat.</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white rounded-3xl border border-stone-100 p-4">
-                            <p class="text-xs text-stone-400 uppercase tracking-[0.18em] mb-2">Catatan</p>
-                            <p id="widget-notes" class="text-sm font-semibold text-stone-800 leading-relaxed">Silakan tambahkan catatan khusus untuk perjalananmu.</p>
+                
+                {{-- List Kendaraan --}}
+                <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h4 class="font-heading font-bold text-neutral-color text-base">Daftar Kendaraan</h4>
+                        <div class="flex gap-2">
+                            <button class="bg-slate-50 hover:bg-slate-100 text-stone-600 border border-stone-200 text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                Status <span class="material-icons-round text-[16px]">arrow_drop_down</span>
+                            </button>
+                            <button class="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1 shadow-sm">
+                                <span class="material-icons-round text-[16px]">add</span> Tambah
+                            </button>
                         </div>
                     </div>
-                    <div id="day-cards" class="space-y-4"></div>
-                </div>
-
-                {{-- Tab: Budget --}}
-                <div id="tab-budget" class="hidden p-5 flex-shrink-0">
-                    <div id="budget-content" class="space-y-3">
-                        {{-- Budget items injected by JS --}}
+                    <div id="kendaraan-content" class="space-y-4">
+                        {{-- Injected by JS --}}
                     </div>
                 </div>
+            </div>
+            
+            {{-- Hidden containers for other tabs to keep JS happy --}}
+            <div id="tab-budget" class="hidden"><div id="budget-content"></div></div>
+            <div id="tab-tips" class="hidden"><div id="tips-content"></div></div>
+            <div id="tab-aturan" class="hidden"><div id="aturan-content"></div></div>
 
-                {{-- Tab: Tips --}}
-                <div id="tab-tips" class="hidden p-5 flex-shrink-0">
-                    <div id="tips-content" class="space-y-3">
-                        {{-- Tips injected by JS --}}
-                    </div>
-                </div>
-
-                {{-- Tab: Rute --}}
-                <div id="tab-rute" class="hidden p-5 flex flex-col gap-5">
-                    <div class="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <div>
-                                    <p class="text-xs uppercase tracking-[0.24em] text-amber-700 font-bold">Rute dan Peta</p>
-                                    <h3 class="text-xl font-semibold text-stone-800">Perjalanan terencana</h3>
-                                </div>
-                                <button type="button" class="btn-secondary">
-                                    <span class="material-icons-round text-base">search</span>
-                                    Cari Kendaraan
-                                </button>
-                            </div>
-                            <div id="map-route" class="h-[420px] rounded-3xl border border-stone-100 overflow-hidden"></div>
-                        </div>
-                        <div class="space-y-4">
-                            <div class="bg-white rounded-3xl border border-stone-100 p-5">
-                                <p class="text-sm font-semibold text-stone-700 mb-3">Rute Harian</p>
-                                <div id="route-timeline" class="space-y-4 text-sm text-stone-600"></div>
-                            </div>
-                            <div id="route-summary" class="bg-white rounded-3xl border border-stone-100 p-5"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Tab: Aturan Tempat Wisata --}}
-                <div id="tab-aturan" class="hidden p-5 space-y-3 flex-shrink-0">
-                    <div id="aturan-content" class="space-y-3">
-                        {{-- Aturan tempat wisata diinjeksi oleh JS --}}
-                    </div>
-                </div>
-
-                {{-- Tab: Rekomendasi Kendaraan --}}
-                <div id="tab-kendaraan" class="hidden p-5 space-y-3 flex-shrink-0">
-                    <div id="kendaraan-content" class="space-y-3">
-                        {{-- Rekomendasi kendaraan diinjeksi oleh JS --}}
-                    </div>
-                </div>
-
-            </div> {{-- /itinerary-content --}}
-        </section>
-
+        </div> {{-- /itinerary-content --}}
     </main>
+
+    {{-- ========== RIGHT COLUMN: Chatbot ========== --}}
+    <aside id="right-sidebar" class="w-full md:w-[340px] xl:w-[380px] bg-white border-l border-stone-200 flex flex-col shrink-0 shadow-[-8px_0_30px_rgba(0,0,0,0.03)] z-20 transition-all duration-300">
+        {{-- Chat Header --}}
+        <div class="relative flex flex-col items-center justify-center px-6 py-5 bg-white border-b border-stone-200">
+            <button onclick="toggleRightSidebar()" class="absolute top-4 right-4 text-stone-600 hover:text-stone-900 transition-colors">
+                <span class="material-icons-round text-2xl">close</span>
+            </button>
+            <div class="flex flex-col items-center gap-1.5 w-full">
+                <div class="flex items-center justify-center">
+                    <span class="material-icons-round text-2xl text-stone-600">smart_display</span>
+                </div>
+                <h3 class="font-heading font-extrabold text-primary text-[22px] tracking-tight">AI Assistant</h3>
+            </div>
+        </div>
+
+        {{-- Chat Messages --}}
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth bg-slate-50/30">
+            {{-- Initial AI Greeting --}}
+            <div class="flex flex-col items-center justify-center text-center mt-2 mb-4 gap-4 border-b border-stone-200 pb-8">
+                <p class="text-[13px] text-stone-700 font-medium leading-relaxed px-4 max-w-[240px]">
+                    Halo, saya siap membantu<br>Anda merencanakan perjalanan
+                </p>
+                <div class="bg-[#003355] text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:bg-[#002244] transition-all w-[200px]">
+                    <span class="material-icons-round text-[18px]">light_mode</span>
+                    <span class="text-xs font-semibold">Saran hari ini</span>
+                    <span class="material-icons-round text-[18px] ml-auto">chevron_right</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Chat Input Form --}}
+        <div class="p-4 bg-slate-50/50">
+            <form id="chat-form" class="flex items-end gap-3">
+                <div class="relative flex-1 bg-white border border-stone-300 rounded-xl overflow-hidden">
+                    <textarea
+                        id="chat-input"
+                        rows="1"
+                        placeholder="Tanyakan Sesuatu"
+                        class="w-full bg-transparent pl-4 pr-4 py-3.5 text-[13px] font-medium text-stone-700 placeholder-stone-500 outline-none resize-none leading-relaxed focus:ring-0 max-h-32"
+                        style="overflow-y: hidden;"
+                    ></textarea>
+                </div>
+                <button type="submit"
+                        id="send-btn"
+                        class="w-[46px] h-[46px] flex items-center justify-center bg-white border border-stone-300 text-stone-600 hover:text-primary hover:border-primary rounded-xl transition-all flex-shrink-0 shadow-sm">
+                    <span class="material-icons-round text-[20px] ml-1 mb-0.5 transform -rotate-45">send</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
 </div>
 
 {{-- ── Loading overlay ── --}}
-<div id="loading-overlay" class="hidden fixed inset-0 bg-warm-sand/80 backdrop-blur-sm z-50 flex items-center justify-center">
-    <div class="bg-white rounded-2xl p-8 shadow-lg text-center max-w-xs w-full mx-4">
-        <div class="w-16 h-16 bg-terracotta/10 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span class="material-icons-round text-terracotta text-3xl">travel_explore</span>
+<div id="loading-overlay" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 shadow-2xl text-center max-w-xs w-full mx-4 border border-stone-100">
+        <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-5 animate-pulse">
+            <span class="material-icons-round text-primary text-3xl">travel_explore</span>
         </div>
-        <p class="font-heading font-semibold text-stone-700 mb-1">Menyusun Itinerary...</p>
-        <p class="text-xs text-stone-400" id="loading-tip">AI sedang menganalisis destinasimu</p>
+        <p class="font-heading font-extrabold text-neutral-color mb-1.5 text-lg">Menyusun Itinerary</p>
+        <p class="text-xs font-medium text-stone-400" id="loading-tip">AI sedang meracik jadwal terbaik untukmu...</p>
     </div>
 </div>
 
@@ -362,6 +403,139 @@
 const GEMINI_API_URL = '/api/gemini'; // proxied through Laravel
 let conversationHistory = [];
 let currentItinerary = null;
+
+// ── Riwayat percakapan (persisted di localStorage per-browser) ─
+const HISTORY_KEY = 'toba_itinerary_history';
+let currentConversationId = null;
+
+function loadHistoryList() {
+    try {
+        return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveHistoryList(list) {
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+    } catch (e) {
+        console.error('Gagal menyimpan riwayat:', e);
+    }
+}
+
+function conversationTitleFrom(text) {
+    const clean = (text || '').trim().replace(/\s+/g, ' ');
+    return clean.length > 60 ? clean.slice(0, 57) + '...' : (clean || 'Percakapan baru');
+}
+
+// Simpan/perbarui satu percakapan tanpa menghapus percakapan lain,
+// lalu pindahkan ke urutan teratas dan re-render sidebar.
+function upsertConversation(id, updates) {
+    const list = loadHistoryList();
+    const idx = list.findIndex(c => c.id === id);
+    const clean = {};
+    Object.keys(updates).forEach(k => {
+        if (updates[k] !== undefined) clean[k] = updates[k];
+    });
+
+    let entry;
+    if (idx === -1) {
+        entry = { id, title: 'Percakapan baru', messages: [], itinerary: null, updatedAt: Date.now(), ...clean };
+        list.unshift(entry);
+    } else {
+        entry = { ...list[idx], ...clean, updatedAt: Date.now() };
+        list.splice(idx, 1);
+        list.unshift(entry);
+    }
+    saveHistoryList(list);
+    renderHistorySidebar();
+}
+
+function renderHistorySidebar() {
+    const container = document.getElementById('history-list');
+    if (!container) return;
+    const list = loadHistoryList();
+
+    if (!list.length) {
+        container.innerHTML = '<p class="text-xs text-stone-400 px-4 py-2">Belum ada riwayat percakapan.</p>';
+        return;
+    }
+
+    container.innerHTML = list.map(c => {
+        const active = c.id === currentConversationId;
+        return `
+        <div data-id="${c.id}" onclick="loadConversation('${c.id}')"
+             class="${active ? 'bg-secondary/10 border border-secondary/20 hover:bg-secondary/15' : 'hover:bg-stone-50 border border-transparent'} rounded-xl p-3 cursor-pointer group transition-colors">
+            <p class="text-xs font-semibold ${active ? 'text-secondary' : 'text-stone-500 font-medium'} leading-snug">${escapeHtml(c.title)}</p>
+        </div>`;
+    }).join('');
+}
+
+// Mulai percakapan baru sepenuhnya di sisi klien (tanpa reload),
+// riwayat percakapan sebelumnya tetap tersimpan di localStorage.
+function startNewConversation() {
+    currentConversationId = 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    conversationHistory = [];
+    currentItinerary = null;
+
+    // Reset panel chat ke sapaan awal
+    chatMessages.innerHTML = `
+        <div class="flex flex-col items-center justify-center text-center mt-2 mb-4 gap-4 border-b border-stone-200 pb-8">
+            <p class="text-[13px] text-stone-700 font-medium leading-relaxed px-4 max-w-[240px]">
+                Halo, saya siap membantu<br>Anda merencanakan perjalanan
+            </p>
+            <div class="bg-[#003355] text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:bg-[#002244] transition-all w-[200px]">
+                <span class="material-icons-round text-[18px]">light_mode</span>
+                <span class="text-xs font-semibold">Saran hari ini</span>
+                <span class="material-icons-round text-[18px] ml-auto">chevron_right</span>
+            </div>
+        </div>`;
+
+    // Reset panel tengah ke empty state
+    itineraryContent.classList.add('hidden');
+    itineraryContent.classList.remove('flex', 'flex-col');
+    emptyState.classList.remove('hidden');
+    btnExport.classList.add('hidden');
+    btnExport.classList.remove('flex');
+    tripPill?.classList.add('hidden');
+    tripPill?.classList.remove('flex');
+
+    renderHistorySidebar();
+}
+
+// Muat kembali percakapan lama dari riwayat: pesan chat & itinerary (jika ada).
+function loadConversation(id) {
+    const list = loadHistoryList();
+    const convo = list.find(c => c.id === id);
+    if (!convo) return;
+
+    currentConversationId = id;
+    conversationHistory = convo.messages || [];
+    currentItinerary = convo.itinerary || null;
+
+    chatMessages.innerHTML = '';
+    conversationHistory.forEach(m => {
+        const text = m.parts?.[0]?.text || '';
+        if (!text) return;
+        if (m.role === 'user') appendUserMessage(text);
+        else appendAIMessage(text);
+    });
+
+    if (currentItinerary) {
+        renderItinerary(currentItinerary);
+    } else {
+        itineraryContent.classList.add('hidden');
+        itineraryContent.classList.remove('flex', 'flex-col');
+        emptyState.classList.remove('hidden');
+        btnExport.classList.add('hidden');
+        btnExport.classList.remove('flex');
+        tripPill?.classList.add('hidden');
+        tripPill?.classList.remove('flex');
+    }
+
+    renderHistorySidebar();
+}
 
 // ── DOM refs ─────────────────────────────────────────────────
 const chatMessages   = document.getElementById('chat-messages');
@@ -384,20 +558,26 @@ chatInput.addEventListener('input', function() {
 chatInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        chatForm.dispatchEvent(new Event('submit'));
+        handleChatSubmit(chatInput.value.trim());
     }
 });
 
 // ── Chat form submit ──────────────────────────────────────────
-chatForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const message = chatInput.value.trim();
+async function handleChatSubmit(message) {
     if (!message) return;
+    if (!currentConversationId) startNewConversation();
 
     chatInput.value = '';
     chatInput.style.height = 'auto';
     appendUserMessage(message);
     conversationHistory.push({ role: 'user', parts: [{ text: message }] });
+
+    // Pesan pertama di percakapan ini menentukan judul riwayat.
+    const isFirstMessage = conversationHistory.length === 1;
+    upsertConversation(currentConversationId, {
+        title: isFirstMessage ? conversationTitleFrom(message) : undefined,
+        messages: conversationHistory,
+    });
 
     appendTypingIndicator();
 
@@ -407,17 +587,29 @@ chatForm.addEventListener('submit', async function(e) {
 
         if (response.itinerary) {
             renderItinerary(response.itinerary);
-            appendAIMessage(response.message || `Itinerary untuk <strong>${response.itinerary.destination}</strong> sudah siap! Cek panel kanan ya. Ada yang ingin diubah?`);
+            appendAIMessage(response.message || `Itinerary untuk <strong>${response.itinerary.destination}</strong> sudah siap! Cek panel kiri ya. Ada yang ingin diubah?`);
             conversationHistory.push({ role: 'model', parts: [{ text: response.message || '' }] });
         } else {
             appendAIMessage(response.message);
             conversationHistory.push({ role: 'model', parts: [{ text: response.message }] });
         }
+
+        upsertConversation(currentConversationId, {
+            messages: conversationHistory,
+            itinerary: currentItinerary,
+        });
     } catch (err) {
         removeTypingIndicator();
-        appendAIMessage('Maaf, terjadi gangguan koneksi. Silakan coba lagi sebentar.');
+        appendAIMessage(err.serverMessage || 'Maaf, terjadi gangguan koneksi. Silakan coba lagi sebentar.');
         console.error(err);
+
+        upsertConversation(currentConversationId, { messages: conversationHistory });
     }
+}
+
+chatForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleChatSubmit(chatInput.value.trim());
 });
 
 // ── API call to Laravel backend ───────────────────────────────
@@ -431,8 +623,26 @@ async function sendToGemini(history) {
         body: JSON.stringify({ history }),
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    // Baca body sebagai teks dulu, karena kalau server error 500/419 di Laravel,
+    // responsnya bisa berupa halaman HTML (bukan JSON) — res.json() langsung
+    // akan melempar error generik yang menyembunyikan pesan aslinya.
+    const rawBody = await res.text();
+    let data = null;
+    try {
+        data = rawBody ? JSON.parse(rawBody) : null;
+    } catch (parseErr) {
+        console.error('Respon /api/gemini bukan JSON valid. Status:', res.status, 'Body:', rawBody.slice(0, 500));
+        throw new Error(`Server mengembalikan respon tidak valid (HTTP ${res.status}). Cek console untuk detail.`);
+    }
+
+    if (!res.ok) {
+        console.error('Gemini API error. Status:', res.status, 'Body:', data);
+        const err = new Error(data?.message || `HTTP ${res.status}`);
+        err.serverMessage = data?.message;
+        throw err;
+    }
+
+    return data;
 }
 
 // ── Render itinerary to right panel ──────────────────────────
@@ -445,8 +655,8 @@ function renderItinerary(data) {
     itineraryContent.classList.add('flex', 'flex-col');
     btnExport.classList.remove('hidden');
     btnExport.classList.add('flex');
-    tripPill.classList.remove('hidden');
-    tripPill.classList.add('flex');
+    tripPill?.classList.remove('hidden');
+    tripPill?.classList.add('flex');
 
     // Update header
     document.getElementById('dest-name').textContent      = data.destination;
@@ -579,10 +789,14 @@ function getIllustrationAccent(category) {
     return accents[cat] || accents['default'];
 }
 
-function buildDayCard(day, dayNum) {
-    const activities = (day.activities || []).map((act, idx) => {
-        const isLast = idx === (day.activities.length - 1);
+// Palet warna aksen per hari (siklus), dipakai untuk strip warna & label vertikal "Hari N"
+const DAY_ACCENT_COLORS = ['#2D6A4F', '#004777', '#D4872E', '#B4691B', '#265C42', '#002B47'];
 
+function buildDayCard(day, dayNum) {
+    const dayColor = DAY_ACCENT_COLORS[(dayNum - 1) % DAY_ACCENT_COLORS.length];
+    const acts = day.activities || [];
+
+    const tiles = acts.map((act) => {
         // Dukungan dua format:
         // Format BARU: { action, location, ... }  → tampil dua baris
         // Format LAMA: { place, ... }             → fallback satu baris (kompatibel mundur)
@@ -591,76 +805,62 @@ function buildDayCard(day, dayNum) {
         const displayAction     = hasActionLocation ? act.action   : null;
 
         return `
-        <div class="py-3 ${isLast ? '' : 'border-b border-stone-100'}">
-            <div class="flex gap-3">
-                <div class="text-center w-14 flex-shrink-0 pt-0.5">
-                    <p class="text-xs font-semibold text-terracotta">${act.time || ''}</p>
-                    ${!isLast ? `<span class="inline-block w-0.5 h-5 bg-stone-200 mx-auto mt-1"></span>` : ''}
+        <div class="bg-white rounded-2xl border border-stone-100 overflow-hidden flex hover:shadow-md transition-shadow">
+            <div class="w-7 flex-shrink-0 flex items-center justify-center" style="background:${dayColor};">
+                <span class="text-white text-[10px] font-bold tracking-wide whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">Hari ${dayNum}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="relative h-40 overflow-hidden" style="background:${getIllustrationAccent(act.category)};">
+                    <img
+                        data-place="${escapeHtml(displayLocation)}"
+                        src="${getIllustrationSrc(act.category)}"
+                        alt="Ilustrasi ${displayLocation}"
+                        class="w-full h-full object-cover"
+                        loading="lazy"
+                    />
+                    <div class="absolute top-2 left-2 bg-black/40 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-1 rounded-full flex items-center gap-1">
+                        <span class="material-icons-round text-[12px]">${getActivityIcon(act.category)}</span>
+                        ${act.time || ''}
+                    </div>
+                    <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
+                        ${displayAction
+                            ? `<p class="text-white/80 text-[10px] uppercase tracking-wider leading-tight">${displayAction}</p>
+                               <p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
+                            : `<p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
+                        }
+                        <p class="text-[9px] text-white/50 truncate hidden mt-0.5" data-credit-place="${escapeHtml(displayLocation)}"></p>
+                    </div>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-start justify-between gap-2 mb-2">
-                        <div class="flex items-start gap-2 min-w-0">
-                            <span class="material-icons-round text-stone-400 text-base mt-0.5 flex-shrink-0">${getActivityIcon(act.category)}</span>
-                            <div class="min-w-0">
-                                ${displayAction
-                                    ? `<p class="text-xs font-medium text-terracotta leading-tight">${displayAction}</p>
-                                       <p class="text-sm font-semibold text-stone-800 leading-snug truncate">${displayLocation}</p>`
-                                    : `<p class="text-sm font-semibold text-stone-800 leading-snug truncate">${displayLocation}</p>`
-                                }
-                            </div>
-                        </div>
-                        ${buildPriceBadge(act)}
-                    </div>
-                    ${act.description ? `<p class="text-xs text-stone-400 mb-2 ml-6 leading-relaxed">${act.description}</p>` : ''}
-                    <div class="ml-6 rounded-xl overflow-hidden border border-stone-100 relative" style="height:200px;background:${getIllustrationAccent(act.category)};">
-                        <img
-                            data-place="${escapeHtml(displayLocation)}"
-                            src="${getIllustrationSrc(act.category)}"
-                            alt="Ilustrasi ${displayLocation}"
-                            class="w-full h-full object-cover"
-                            loading="lazy"
-                        />
-                        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent px-3 py-2.5 pointer-events-none">
-                            ${displayAction
-                                ? `<p class="text-white/80 text-[10px] uppercase tracking-wider leading-tight">${displayAction}</p>
-                                   <p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
-                                : `<p class="text-white text-sm font-semibold truncate drop-shadow">${displayLocation}</p>`
-                            }
-                            <p class="text-[9px] text-white/50 truncate hidden mt-0.5" data-credit-place="${escapeHtml(displayLocation)}"></p>
-                        </div>
-                    </div>
+                <div class="p-3.5">
+                    ${act.description ? `<p class="text-xs text-stone-500 leading-relaxed mb-2.5 line-clamp-2">${act.description}</p>` : ''}
+                    ${buildPriceBadge(act)}
                 </div>
             </div>
         </div>`;
     }).join('');
 
+    const totalMin = acts.reduce((s, a) => s + (parseInt(a.harga_min) || 0), 0);
+    const totalMax = acts.reduce((s, a) => s + (parseInt(a.harga_max) || 0), 0);
+    const fmt = (n) => 'Rp ' + n.toLocaleString('id-ID');
+
     return `
-        <div class="bg-white rounded-2xl border border-stone-100 overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-3 bg-stone-50 border-b border-stone-100">
+        <div>
+            <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-terracotta rounded-lg flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:${dayColor};">
                         <span class="text-white text-xs font-bold font-heading">${dayNum}</span>
                     </div>
                     <div>
-                        <p class="text-sm font-semibold font-heading text-stone-700">Hari ${dayNum}</p>
+                        <p class="text-sm font-extrabold font-heading text-neutral-color">Hari ${dayNum}</p>
                         ${day.title ? `<p class="text-xs text-stone-400">${day.title}</p>` : ''}
                     </div>
                 </div>
                 <div class="text-right">
-                ${(() => {
-                    const acts = day.activities || [];
-                    const totalMin = acts.reduce((s, a) => s + (parseInt(a.harga_min) || 0), 0);
-                    const totalMax = acts.reduce((s, a) => s + (parseInt(a.harga_max) || 0), 0);
-                    const fmt = (n) => 'Rp ' + n.toLocaleString('id-ID');
-                    return (totalMin > 0 || totalMax > 0)
-                        ? `<p class="text-xs font-semibold text-terracotta">${fmt(totalMin)} – ${fmt(totalMax)}</p>`
-                        : '';
-                })()}
-                <p class="text-xs text-stone-400">${day.activities?.length || 0} aktivitas</p>
+                    ${(totalMin > 0 || totalMax > 0) ? `<p class="text-xs font-extrabold text-primary">${fmt(totalMin)} – ${fmt(totalMax)}</p>` : ''}
+                    <p class="text-xs text-stone-400">${acts.length} aktivitas</p>
+                </div>
             </div>
-
-            </div>
-            <div class="px-5">${activities}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${tiles}</div>
         </div>
     `;
 }
@@ -744,8 +944,8 @@ function renderBudget(items) {
     }
     const total = items.reduce((sum, i) => sum + (i.amount || 0), 0);
     container.innerHTML = `
-        <div class="bg-terracotta text-white rounded-2xl p-5 mb-4">
-            <p class="text-terracotta-light text-xs mb-1">Total Estimasi Budget</p>
+        <div class="bg-primary text-white rounded-2xl p-5 mb-4">
+            <p class="text-primary-light text-xs mb-1">Total Estimasi Budget</p>
             <p class="font-heading font-bold text-3xl">Rp ${total.toLocaleString('id-ID')}</p>
         </div>
         ${items.map(item => `
@@ -910,11 +1110,14 @@ function renderKendaraanList(items) {
     const availableCount = currentVehicleRecommendations.filter(item => !['dipakai','digunakan','in use','in-use','used'].includes((item.status || '').toLowerCase())).length;
     const inUseCount = currentVehicleRecommendations.length - availableCount;
 
-    document.getElementById('vehicle-total')?.textContent = currentVehicleRecommendations.length;
-    document.getElementById('vehicle-available')?.textContent = availableCount;
-    document.getElementById('vehicle-in-use')?.textContent = inUseCount;
+    const vehicleTotalEl = document.getElementById('vehicle-total');
+    const vehicleAvailableEl = document.getElementById('vehicle-available');
+    const vehicleInUseEl = document.getElementById('vehicle-in-use');
+    if (vehicleTotalEl) vehicleTotalEl.textContent = currentVehicleRecommendations.length;
+    if (vehicleAvailableEl) vehicleAvailableEl.textContent = availableCount;
+    if (vehicleInUseEl) vehicleInUseEl.textContent = inUseCount;
 
-    const listContainer = document.getElementById('kendaraan-list');
+    const listContainer = document.getElementById('kendaraan-content');
     if (!listContainer) {
         return;
     }
@@ -1193,19 +1396,27 @@ function renderMap(data) {
 }
 
 
-// ── Tab switching ─────────────────────────────────────────────
 function switchTab(name) {
     ['itinerary', 'budget', 'tips', 'rute', 'aturan', 'kendaraan'].forEach(tab => {
         const el = document.getElementById(`tab-${tab}`);
         const btn = document.querySelector(`[data-tab="${tab}"]`);
-        if (tab === name) {
-            el.classList.remove('hidden');
-            btn.classList.add('border-terracotta', 'text-terracotta');
-            btn.classList.remove('border-transparent', 'text-stone-400');
-        } else {
-            el.classList.add('hidden');
-            btn.classList.remove('border-terracotta', 'text-terracotta');
-            btn.classList.add('border-transparent', 'text-stone-400');
+        if (el) {
+            if (tab === name) {
+                el.classList.remove('hidden');
+                if (btn) {
+                    btn.className = "tab-btn active px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all bg-white text-primary border-t border-x border-stone-200 -mb-px shadow-[0_-2px_10px_rgba(0,0,0,0.02)]";
+                }
+            } else {
+                el.classList.add('hidden');
+                if (btn) {
+                    // if it's one of the hidden tabs, keep it hidden
+                    if (['budget', 'tips', 'aturan'].includes(tab)) {
+                        btn.className = "tab-btn hidden";
+                    } else {
+                        btn.className = "tab-btn px-5 py-2.5 rounded-t-lg text-sm font-semibold transition-all text-stone-500 hover:text-neutral-color hover:bg-white/50 border border-transparent -mb-px";
+                    }
+                }
+            }
         }
     });
 
@@ -1219,11 +1430,11 @@ function appendUserMessage(text) {
     const div = document.createElement('div');
     div.className = 'flex items-start gap-3 justify-end';
     div.innerHTML = `
-        <div class="bg-terracotta text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[260px]">
-            <p class="text-sm leading-relaxed">${escapeHtml(text)}</p>
+        <div class="bg-[#003355] text-white rounded-xl px-4 py-3 max-w-[260px] shadow-sm">
+            <p class="text-[13px] font-medium leading-relaxed">${escapeHtml(text)}</p>
         </div>
-        <div class="w-8 h-8 bg-stone-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="material-icons-round text-stone-500 text-base">person</span>
+        <div class="w-8 h-8 bg-[#003355] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+            <span class="material-icons-round text-white text-[16px]">person_outline</span>
         </div>`;
     chatMessages.appendChild(div);
     scrollToBottom();
@@ -1233,11 +1444,11 @@ function appendAIMessage(html) {
     const div = document.createElement('div');
     div.className = 'flex items-start gap-3';
     div.innerHTML = `
-        <div class="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="material-icons-round text-white text-base">smart_toy</span>
+        <div class="w-8 h-8 bg-[#3c3726] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+            <span class="material-icons-round text-white text-[16px]">smart_display</span>
         </div>
-        <div class="bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[280px]">
-            <p class="text-sm text-stone-700 leading-relaxed">${html}</p>
+        <div class="bg-[#3c3726] text-white shadow-sm rounded-xl px-4 py-3 max-w-[280px]">
+            <p class="text-[13px] font-medium leading-relaxed">${html}</p>
         </div>`;
     chatMessages.appendChild(div);
     scrollToBottom();
@@ -1248,15 +1459,11 @@ function appendTypingIndicator() {
     div.id = 'typing-indicator';
     div.className = 'flex items-start gap-3';
     div.innerHTML = `
-        <div class="w-8 h-8 bg-terracotta rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="material-icons-round text-white text-base">smart_toy</span>
+        <div class="w-8 h-8 bg-[#3c3726] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+            <span class="material-icons-round text-white text-[16px]">smart_display</span>
         </div>
-        <div class="bg-stone-50 border border-stone-100 rounded-2xl rounded-tl-sm px-4 py-3">
-            <div class="flex gap-1 items-center h-5">
-                <span class="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style="animation-delay:0ms"></span>
-                <span class="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style="animation-delay:150ms"></span>
-                <span class="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style="animation-delay:300ms"></span>
-            </div>
+        <div class="bg-[#3c3726] shadow-sm rounded-xl px-4 py-3 flex items-center gap-2">
+            <p class="text-[12px] text-stone-200 font-medium mr-1">Sedang Berpikir ....</p>
         </div>`;
     chatMessages.appendChild(div);
     scrollToBottom();
@@ -1280,30 +1487,57 @@ function escapeHtml(text) {
 }
 
 function resetChat() {
-    if (!confirm('Mulai percakapan baru? Itinerary saat ini akan dihapus.')) return;
-    window.location.href = '{{ route("dashboard") }}';
+    if (conversationHistory.length > 0 && !confirm('Mulai percakapan baru? Percakapan saat ini akan disimpan ke riwayat.')) return;
+    startNewConversation();
 }
 
 function exportItinerary() {
     window.print();
 }
 
-// ── Auto-load from URL query ──────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-    if (kendaraanSearch) {
-        kendaraanSearch.addEventListener('input', function() {
-            filterKendaraan(this.value);
-        });
-    }
+// ── Sidebar / AI Assistant toggles ─────────────────────────────
+// Menggunakan class 'force-hidden' (display:none !important) agar klik
+// selalu menghasilkan hasil yang konsisten, terlepas dari kombinasi
+// class responsive 'hidden'/'md:flex' yang dipakai untuk state awal.
+// Karena kolom tengah (main) memakai flex-1, ia otomatis menyesuaikan
+// lebar begitu salah satu sidebar disembunyikan/ditampilkan.
+function toggleLeftSidebar() {
+    document.getElementById('left-sidebar')?.classList.toggle('force-hidden');
+}
 
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q');
-    if (q) {
-        setTimeout(() => {
-            chatInput.value = q;
-            chatForm.dispatchEvent(new Event('submit'));
-        }, 600);
-    }
-});
+function toggleRightSidebar() {
+    document.getElementById('right-sidebar')?.classList.toggle('force-hidden');
+}
+
+function toggleMobileSidebar() {
+    const el = document.getElementById('left-sidebar');
+    if (!el) return;
+    el.classList.toggle('hidden');
+    el.classList.toggle('flex');
+}
+
+// ── Auto-load from URL query ──────────────────────────────────
+if (kendaraanSearch) {
+    kendaraanSearch.addEventListener('input', function() {
+        filterKendaraan(this.value);
+    });
+}
+
+// ── Inisialisasi ─────────────────────────────────────────────
+// Render riwayat percakapan yang tersimpan, lalu mulai percakapan baru.
+renderHistorySidebar();
+startNewConversation();
+
+const params = new URLSearchParams(window.location.search);
+const q = params.get('q');
+if (q) {
+    // Jalankan langsung tanpa menunggu event DOMContentLoaded karena script ada di akhir body.
+    // Prompt dari landing page otomatis dikirim ke AI Assistant dan muncul di kolom kanan.
+    setTimeout(() => {
+        handleChatSubmit(q);
+        // Bersihkan URL agar tidak submit ulang saat refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }, 100);
+}
 </script>
 </x-layouts.app>

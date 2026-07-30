@@ -6,6 +6,7 @@ use App\Services\GeminiApiService;
 use App\Services\RagService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class GeminiController extends Controller
@@ -54,11 +55,27 @@ class GeminiController extends Controller
 
         $ragContext = '';
         if (!empty($latestUserMessage)) {
-            // Find Top 5 relevant context
-            $ragContext = $this->ragService->searchContext($latestUserMessage, 5);
+            try {
+                // Find Top 5 relevant context
+                $ragContext = $this->ragService->searchContext($latestUserMessage, 5);
+            } catch (\Throwable $e) {
+                // Jangan sampai kegagalan RAG (mis. koneksi DB vector, index kosong,
+                // dsb.) membuat seluruh chat gagal total dengan 500 HTML page.
+                Log::error('RagService searchContext gagal, lanjut tanpa konteks RAG', [
+                    'error' => $e->getMessage(),
+                ]);
+                $ragContext = '';
+            }
         }
 
-        $result = $this->lmService->chat($history, $ragContext);
+        try {
+            $result = $this->lmService->chat($history, $ragContext);
+        } catch (\Throwable $e) {
+            Log::error('GeminiApiService chat() melempar exception', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Maaf, terjadi gangguan pada server AI. Silakan coba lagi.',
+            ], 500);
+        }
 
         return response()->json($result);
     }
