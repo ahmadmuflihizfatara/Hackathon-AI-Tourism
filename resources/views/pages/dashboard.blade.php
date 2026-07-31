@@ -83,6 +83,112 @@
                 <span class="material-icons-round text-[18px]">add</span>
                 Itinerary Baru
             </button>
+            <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-5 border-b border-stone-100">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <span class="material-icons-round text-primary text-[20px]">settings</span>
+                </div>
+                <h3 class="font-heading font-extrabold text-neutral-color text-lg">Pengaturan</h3>
+            </div>
+            <button onclick="closeSettings()" class="text-stone-400 hover:text-stone-700 transition-colors hover:bg-stone-100 rounded-lg p-1">
+                <span class="material-icons-round text-2xl">close</span>
+            </button>
+        </div>
+        <div class="px-6 py-6 space-y-5">
+            <!-- Tampilan -->
+            <div>
+                <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-3">Tampilan</p>
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-stone-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-icons-round text-stone-400 text-[20px]">text_fields</span>
+                            <span class="text-sm font-semibold text-stone-700">Ukuran Teks</span>
+                        </div>
+                        <select id="font-size-select" onchange="setFontSize(this.value)" class="text-sm border border-stone-200 rounded-lg px-3 py-1.5 bg-white text-stone-700 outline-none focus:border-primary">
+                            <option value="normal">Normal</option>
+                            <option value="large">Besar</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- Data -->
+            <div>
+                <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-3">Kelola Data</p>
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-stone-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-icons-round text-stone-400 text-[20px]">history</span>
+                            <div>
+                                <span class="text-sm font-semibold text-stone-700 block">Riwayat Percakapan</span>
+                                <span id="history-count" class="text-xs text-stone-400">Memuat...</span>
+                            </div>
+                        </div>
+                        <button onclick="clearHistory()" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 border border-rose-100">
+                            Hapus Semua
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-stone-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-icons-round text-stone-400 text-[20px]">bookmark</span>
+                            <div>
+                                <span class="text-sm font-semibold text-stone-700 block">Itinerary Tersimpan</span>
+                                <span id="saved-count" class="text-xs text-stone-400">Memuat...</span>
+                            </div>
+                        </div>
+                        <button onclick="clearSaved()" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 border border-rose-100">
+                            Hapus Semua
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-stone-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-icons-round text-stone-400 text-[20px]">sticky_note_2</span>
+                            <div>
+                                <span class="text-sm font-semibold text-stone-700 block">Catatan Saya</span>
+                            </div>
+                        </div>
+                        <button onclick="localStorage.removeItem('toba_user_note'); loadUserNote(); showToast('Catatan dihapus');" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 border border-rose-100">
+                            Hapus
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Tentang -->
+            <div class="bg-primary/5 border border-primary/10 rounded-2xl p-4 text-center">
+                <p class="font-heading font-extrabold text-primary text-base">Toba Itinerary</p>
+                <p class="text-xs text-stone-400 mt-1">v1.0 · Hackathon AI Tourism 2025</p>
+                <p class="text-xs text-stone-300 mt-0.5">Didukung Google Gemini AI</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Itinerary Disimpan -->
+<div id="saved-modal" class="hidden fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full max-w-lg mx-0 md:mx-4 max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-5 border-b border-stone-100 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <span class="material-icons-round text-primary text-[20px]">bookmark</span>
+                </div>
+                <h3 class="font-heading font-extrabold text-neutral-color text-lg">Itinerary Disimpan</h3>
+            </div>
+            <button onclick="closeSavedItineraries()" class="text-stone-400 hover:text-stone-700 transition-colors hover:bg-stone-100 rounded-lg p-1">
+                <span class="material-icons-round text-2xl">close</span>
+            </button>
+        </div>
+        <div id="saved-list-content" class="flex-1 overflow-y-auto p-5 space-y-3">
+            <!-- Diisi oleh JS -->
+        </div>
+        <div class="px-5 pb-5 pt-2 flex-shrink-0 border-t border-stone-100">
+            <button onclick="closeSavedItineraries()" class="w-full bg-slate-100 text-stone-600 font-semibold py-3 rounded-xl text-sm hover:bg-slate-200 transition-colors">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
         </div>
 
         {{-- Navigation Menu --}}
@@ -91,10 +197,10 @@
                 <span class="material-icons-round text-stone-400 group-hover:text-primary transition-colors text-[20px]">home</span>
                 Home
             </a>
-            <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-primary rounded-xl transition-colors group">
-                <span class="material-icons-round text-stone-400 group-hover:text-primary transition-colors text-[20px]">bookmark_border</span>
-                Itinerary Disimpan
-            </a>
+            <button onclick="openSavedItineraries()" class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 hover:text-primary rounded-xl transition-colors group w-full">
+            <span class="material-icons-round text-stone-400 group-hover:text-primary transition-colors text-[20px]">bookmark_border</span>
+            Itinerary Disimpan
+            </button>
         </div>
 
         {{-- History Section --}}
@@ -107,9 +213,9 @@
 
         {{-- Settings Button --}}
         <div class="p-4 border-t border-stone-100">
-            <button class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 rounded-xl transition-colors group">
-                <span class="material-icons-round text-stone-400 group-hover:text-stone-600 text-[20px]">settings</span>
-                Settings
+            <button onclick="openSettings()" class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 rounded-xl transition-colors group">
+        <span class="material-icons-round text-stone-400 group-hover:text-stone-600 text-[20px]">settings</span>
+            Settings
             </button>
         </div>
     </aside>
@@ -130,6 +236,9 @@
             </button>
         </div>
         <div class="absolute top-4 right-6 z-20 flex gap-2">
+            <button id="btn-save" onclick="saveCurrentItinerary()" class="hidden items-center gap-1.5 bg-white border border-stone-200 text-stone-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
+        <span class="material-icons-round text-[16px]">bookmark_add</span> Simpan
+        </button>
             <button id="btn-export" onclick="exportItinerary()" class="hidden items-center gap-1.5 bg-white border border-stone-200 text-stone-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
                 <span class="material-icons-round text-[16px]">download</span> Ekspor
             </button>
@@ -238,12 +347,20 @@
                         </div>
                         <ul id="widget-checklist" class="text-sm font-medium text-stone-600 space-y-1.5 ml-1"></ul>
                     </div>
-                    <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="material-icons-round text-primary text-[18px]">sticky_note_2</span>
-                            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Catatan AI</p>
+                        <div class="bg-amber-50 rounded-2xl border border-amber-100 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="material-icons-round text-amber-500 text-[18px]">sticky_note_2</span>
+                                <p class="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Catatan</p>
+                            </div>
+                            <span class="text-[10px] text-amber-400">Tersimpan otomatis</span>
                         </div>
-                        <p id="widget-notes" class="text-sm font-medium text-stone-600 leading-relaxed"></p>
+                        <textarea
+                            id="widget-notes"
+                            placeholder="Tulis catatanmu di sini..."
+                            class="flex-1 w-full text-sm text-stone-600 leading-relaxed resize-none outline-none bg-transparent placeholder-amber-300 min-h-[80px]"
+                            oninput="saveUserNote(this.value)"
+                        ></textarea>
                     </div>
                 </div>
             </div>
@@ -336,16 +453,22 @@
     {{-- ========== RIGHT COLUMN: Chatbot ========== --}}
     <aside id="right-sidebar" class="w-full md:w-[340px] xl:w-[380px] bg-white border-l border-stone-200 flex flex-col shrink-0 shadow-[-8px_0_30px_rgba(0,0,0,0.03)] z-20 transition-all duration-300">
         {{-- Chat Header --}}
-        <div class="relative flex flex-col items-center justify-center px-6 py-5 bg-white border-b border-stone-200">
-            <button onclick="toggleRightSidebar()" class="absolute top-4 right-4 text-stone-600 hover:text-stone-900 transition-colors">
-                <span class="material-icons-round text-2xl">close</span>
-            </button>
-            <div class="flex flex-col items-center gap-1.5 w-full">
-                <div class="flex items-center justify-center">
-                    <span class="material-icons-round text-2xl text-stone-600">smart_display</span>
-                </div>
-                <h3 class="font-heading font-extrabold text-primary text-[22px] tracking-tight">AI Assistant</h3>
+        <div class="relative flex items-center justify-between px-5 py-4 bg-white border-b border-stone-100">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+                <span class="material-icons-round text-white text-[18px]">psychology</span>
             </div>
+            <button onclick="toggleRightSidebar()" class="text-stone-400 hover:text-stone-700 transition-colors hover:bg-stone-100 rounded-lg p-1 flex-shrink-0">
+            <span class="material-icons-round text-xl">close</span>
+            </button>
+            <div>
+                <h3 class="font-heading font-extrabold text-neutral-color text-[15px] leading-tight">AI Assistant</h3>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse"></span>
+                    <p class="text-[11px] text-emerald font-semibold">Online</p>
+                </div>
+            </div>
+        </div>
         </div>
 
         {{-- Chat Messages --}}
@@ -355,11 +478,11 @@
                 <p class="text-[13px] text-stone-700 font-medium leading-relaxed px-4 max-w-[240px]">
                     Halo, saya siap membantu<br>Anda merencanakan perjalanan
                 </p>
-                <div class="bg-[#003355] text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:bg-[#002244] transition-all w-[200px]">
-                    <span class="material-icons-round text-[18px]">light_mode</span>
-                    <span class="text-xs font-semibold">Saran hari ini</span>
-                    <span class="material-icons-round text-[18px] ml-auto">chevron_right</span>
-                </div>
+                <button onclick="sendSaranHariIni()" class="bg-primary text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 shadow-sm hover:bg-primary-dark transition-all w-[200px] group">
+        <span class="material-icons-round text-[18px]">wb_sunny</span>
+        <span class="text-xs font-semibold">Saran hari ini</span>
+        <span class="material-icons-round text-[18px] ml-auto">chevron_right</span>
+        </button>
             </div>
         </div>
 
@@ -487,11 +610,11 @@ function startNewConversation() {
             <p class="text-[13px] text-stone-700 font-medium leading-relaxed px-4 max-w-[240px]">
                 Halo, saya siap membantu<br>Anda merencanakan perjalanan
             </p>
-            <div class="bg-[#003355] text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:bg-[#002244] transition-all w-[200px]">
-                <span class="material-icons-round text-[18px]">light_mode</span>
-                <span class="text-xs font-semibold">Saran hari ini</span>
-                <span class="material-icons-round text-[18px] ml-auto">chevron_right</span>
-            </div>
+            <button onclick="sendSaranHariIni()" class="bg-primary text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 shadow-sm hover:bg-primary-dark transition-all w-[200px] group">
+        <span class="material-icons-round text-[18px]">wb_sunny</span>
+        <span class="text-xs font-semibold">Saran hari ini</span>
+        <span class="material-icons-round text-[18px] ml-auto">chevron_right</span>
+        </button>
         </div>`;
 
     // Reset panel tengah ke empty state
@@ -657,6 +780,8 @@ function renderItinerary(data) {
     itineraryContent.classList.add('flex', 'flex-col');
     btnExport.classList.remove('hidden');
     btnExport.classList.add('flex');
+    document.getElementById('btn-save')?.classList.remove('hidden');
+    document.getElementById('btn-save')?.classList.add('flex');
     tripPill?.classList.remove('hidden');
     tripPill?.classList.add('flex');
 
@@ -684,7 +809,7 @@ function renderItinerary(data) {
     document.getElementById('widget-weather').textContent = data.weather_summary || 'Perkiraan cuaca dasar akan muncul setelah itinerary dibuat.';
     document.getElementById('widget-detail-budget').textContent = data.budget_details || 'Estimasi lengkap tersedia di tab Budget.';
     document.getElementById('widget-checklist').innerHTML = (data.checklist || ['Bawa pakaian nyaman', 'Siapkan uang tunai kecil', 'Isi daya ponsel']).map(item => `<li>• ${escapeHtml(item)}</li>`).join('');
-    document.getElementById('widget-notes').textContent = data.notes || 'Catatan khusus akan muncul di sini jika tersedia.';
+    loadUserNote(); // jangan timpa catatan user dengan data AI
 
     const dayCards = document.getElementById('day-cards');
     if (dayCards) {
@@ -1414,6 +1539,192 @@ function renderMap(data) {
         </div>
     `;
 }
+function saveUserNote(value) {
+    localStorage.setItem('toba_user_note', value);
+}
+
+function loadUserNote() {
+    const note = localStorage.getItem('toba_user_note') || '';
+    const el = document.getElementById('widget-notes');
+    if (el) el.value = note;
+}
+
+// ── Saran Hari Ini ────────────────────────────────────────────
+function sendSaranHariIni() {
+    const today = new Date();
+    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli',
+                    'Agustus','September','Oktober','November','Desember'];
+    const dateStr = `${days[today.getDay()]}, ${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+    const prompt = `Hari ini ${dateStr}. Berikan saran destinasi wisata di sekitar Danau Toba yang cocok dikunjungi hari ini, beserta tips singkat perjalanannya.`;
+    handleChatSubmit(prompt);
+}
+
+// ── Toast Notification ────────────────────────────────────────
+function showToast(message) {
+    const existing = document.getElementById('toast-notif');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'toast-notif';
+    toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] bg-neutral-color text-white text-sm font-semibold px-5 py-3 rounded-full shadow-xl flex items-center gap-2';
+    toast.style.cssText = 'animation: fadeIn 0.3s ease forwards;';
+    toast.innerHTML = `<span class="material-icons-round text-emerald text-[18px]">check_circle</span>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ── Settings Modal ────────────────────────────────────────────
+function openSettings() {
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    const historyList = loadHistoryList();
+    const histEl = document.getElementById('history-count');
+    if (histEl) histEl.textContent = `${historyList.length} percakapan tersimpan`;
+    const savedList = JSON.parse(localStorage.getItem('toba_saved_itineraries') || '[]');
+    const savedEl = document.getElementById('saved-count');
+    if (savedEl) savedEl.textContent = `${savedList.length} itinerary tersimpan`;
+    modal.classList.remove('hidden');
+}
+
+function closeSettings() {
+    document.getElementById('settings-modal')?.classList.add('hidden');
+}
+
+function clearHistory() {
+    if (!confirm('Hapus semua riwayat percakapan?')) return;
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistorySidebar();
+    const el = document.getElementById('history-count');
+    if (el) el.textContent = '0 percakapan tersimpan';
+}
+
+function clearSaved() {
+    if (!confirm('Hapus semua itinerary tersimpan?')) return;
+    localStorage.removeItem('toba_saved_itineraries');
+    const el = document.getElementById('saved-count');
+    if (el) el.textContent = '0 itinerary tersimpan';
+}
+
+function setFontSize(size) {
+    document.body.style.fontSize = size === 'large' ? '16px' : '14px';
+    localStorage.setItem('toba_font_size', size);
+}
+
+// Tutup settings saat klik di luar
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('settings-modal');
+    if (modal && !modal.classList.contains('hidden') && e.target === modal) {
+        closeSettings();
+    }
+    const savedModal = document.getElementById('saved-modal');
+    if (savedModal && !savedModal.classList.contains('hidden') && e.target === savedModal) {
+        closeSavedItineraries();
+    }
+});
+
+// ── Simpan & Kelola Itinerary ─────────────────────────────────
+function saveCurrentItinerary() {
+    if (!currentItinerary) {
+        showToast('Belum ada itinerary untuk disimpan.');
+        return;
+    }
+    const saved = JSON.parse(localStorage.getItem('toba_saved_itineraries') || '[]');
+    // Cegah duplikat berdasarkan destination + days
+    const isDuplicate = saved.some(s =>
+        s.data?.destination === currentItinerary.destination &&
+        s.data?.days === currentItinerary.days
+    );
+    if (isDuplicate) {
+        showToast('Itinerary ini sudah pernah disimpan.');
+        return;
+    }
+    const entry = {
+        id: 'saved_' + Date.now(),
+        title: currentItinerary.destination || 'Itinerary',
+        data: currentItinerary,
+        savedAt: Date.now(),
+    };
+    saved.unshift(entry);
+    if (saved.length > 20) saved.pop(); // max 20 tersimpan
+    localStorage.setItem('toba_saved_itineraries', JSON.stringify(saved));
+    showToast('Itinerary berhasil disimpan! 🔖');
+}
+
+function openSavedItineraries() {
+    const modal = document.getElementById('saved-modal');
+    if (!modal) return;
+    renderSavedList();
+    modal.classList.remove('hidden');
+}
+
+function closeSavedItineraries() {
+    document.getElementById('saved-modal')?.classList.add('hidden');
+}
+
+function renderSavedList() {
+    const container = document.getElementById('saved-list-content');
+    if (!container) return;
+    const saved = JSON.parse(localStorage.getItem('toba_saved_itineraries') || '[]');
+
+    if (!saved.length) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mb-4">
+                    <span class="material-icons-round text-stone-300 text-3xl">bookmark_border</span>
+                </div>
+                <p class="text-stone-600 font-semibold mb-1">Belum ada itinerary tersimpan</p>
+                <p class="text-xs text-stone-400 max-w-[200px] leading-relaxed">Buat itinerary lalu klik tombol Simpan di bagian atas untuk menyimpannya.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = saved.map(item => {
+        const date = new Date(item.savedAt);
+        const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        const days = item.data?.days || 0;
+        const budget = item.data?.total_budget || '';
+        return `
+            <div class="bg-slate-50 rounded-2xl border border-stone-200 p-4 hover:border-primary/30 hover:shadow-sm transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-icons-round text-primary text-[18px]">travel_explore</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-bold text-stone-800 text-sm truncate">${escapeHtml(item.title)}</p>
+                            <p class="text-xs text-stone-400">${dateStr} · ${days} hari · ${escapeHtml(budget)}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5 flex-shrink-0">
+                        <button onclick="loadSavedItinerary('${item.id}')" class="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary-dark transition-colors">
+                            Buka
+                        </button>
+                        <button onclick="deleteSavedItinerary('${item.id}')" class="bg-rose-50 text-rose-500 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-colors">
+                            Hapus
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function loadSavedItinerary(id) {
+    const saved = JSON.parse(localStorage.getItem('toba_saved_itineraries') || '[]');
+    const item = saved.find(s => s.id === id);
+    if (!item) return;
+    closeSavedItineraries();
+    currentItinerary = item.data;
+    renderItinerary(item.data);
+    showToast('Itinerary berhasil dimuat!');
+}
+
+function deleteSavedItinerary(id) {
+    if (!confirm('Hapus itinerary ini?')) return;
+    let saved = JSON.parse(localStorage.getItem('toba_saved_itineraries') || '[]');
+    saved = saved.filter(s => s.id !== id);
+    localStorage.setItem('toba_saved_itineraries', JSON.stringify(saved));
+    renderSavedList();
+}
 
 
 function switchTab(name) {
@@ -1545,6 +1856,17 @@ if (kendaraanSearch) {
 // Render riwayat percakapan yang tersimpan, lalu mulai percakapan baru.
 renderHistorySidebar();
 startNewConversation();
+// Load catatan user dari localStorage
+loadUserNote();
+
+// Load font size preference
+const savedFontSize = localStorage.getItem('toba_font_size');
+if (savedFontSize) {
+    setFontSize(savedFontSize);
+    const sel = document.getElementById('font-size-select');
+    if (sel) sel.value = savedFontSize;
+}
+
 
 const params = new URLSearchParams(window.location.search);
 const q = params.get('q');
