@@ -211,11 +211,19 @@
             </div>
         </div>
 
-        {{-- Settings Button --}}
-        <div class="p-4 border-t border-stone-100">
-            <button onclick="openSettings()" class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 rounded-xl transition-colors group">
-        <span class="material-icons-round text-stone-400 group-hover:text-stone-600 text-[20px]">settings</span>
-            Settings
+        {{-- Action Buttons & Settings --}}
+        <div class="p-4 border-t border-stone-100 space-y-2">
+            <button id="btn-save" onclick="saveCurrentItinerary()" class="hidden items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 rounded-xl transition-colors group">
+                <span class="material-icons-round text-stone-400 group-hover:text-stone-600 text-[20px]">bookmark_add</span>
+                Simpan
+            </button>
+            <button id="btn-export" onclick="exportItinerary()" class="hidden items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 rounded-xl transition-colors group">
+                <span class="material-icons-round text-stone-400 group-hover:text-stone-600 text-[20px]">download</span>
+                Ekspor
+            </button>
+            <button onclick="openSettings()" class="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-white bg-[#054979] hover:bg-[#054979]/90 rounded-xl transition-colors group shadow-sm">
+                <span class="material-icons-round text-white group-hover:text-white text-[20px]">settings</span>
+                Settings
             </button>
         </div>
     </aside>
@@ -236,12 +244,6 @@
             </button>
         </div>
         <div class="absolute top-4 right-6 z-20 flex gap-2">
-            <button id="btn-save" onclick="saveCurrentItinerary()" class="hidden items-center gap-1.5 bg-white border border-stone-200 text-stone-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
-        <span class="material-icons-round text-[16px]">bookmark_add</span> Simpan
-        </button>
-            <button id="btn-export" onclick="exportItinerary()" class="hidden items-center gap-1.5 bg-white border border-stone-200 text-stone-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
-                <span class="material-icons-round text-[16px]">download</span> Ekspor
-            </button>
             <button onclick="toggleRightSidebar()" class="hidden md:flex items-center justify-center bg-white border border-stone-200 text-stone-600 w-9 h-9 rounded-lg hover:border-primary hover:text-primary transition-all shadow-sm">
                 <span class="material-icons-round text-[18px]">chat</span>
             </button>
@@ -268,22 +270,43 @@
                     Ringkasan Itinerary
                 </h2>
                 
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
-                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Lokasi</p>
-                        <p id="summary-location" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+                <div class="flex flex-col lg:flex-row gap-4">
+                    <!-- Card 1: Details -->
+                    <div class="bg-white border border-stone-200 rounded-xl flex-[2] min-w-[200px] shadow-sm flex items-center p-4">
+                        <div class="w-1/2 border-r border-stone-200 flex flex-col gap-3 pr-4">
+                            <p class="text-neutral-color font-medium text-sm text-center">Lokasi</p>
+                            <p class="text-neutral-color font-medium text-sm text-center">Biaya</p>
+                            <p class="text-neutral-color font-medium text-sm text-center">Waktu Berlibur</p>
+                        </div>
+                        <div class="w-1/2 flex flex-col gap-3 pl-4">
+                            <p class="text-neutral-color font-bold text-sm text-center truncate" id="summary-location"></p>
+                            <p class="text-neutral-color font-bold text-sm text-center truncate" id="summary-budget"></p>
+                            <p class="text-neutral-color font-bold text-sm text-center truncate" id="summary-duration"></p>
+                        </div>
                     </div>
-                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
-                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Biaya</p>
-                        <p id="summary-budget" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+                    
+                    <!-- Card 2: Tempat -->
+                    <div class="bg-primary text-white rounded-xl p-4 flex flex-col items-center justify-center flex-1 shadow-sm min-w-[100px]">
+                        <span class="material-icons-round text-[28px] mb-1">location_on</span>
+                        <p id="summary-places" class="font-medium text-center leading-tight"></p>
                     </div>
-                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
-                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Waktu Berlibur</p>
-                        <p id="summary-duration" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+
+                    <!-- Card 3: Hari -->
+                    <div class="bg-white border border-primary text-primary rounded-xl p-4 flex flex-col items-center justify-center flex-1 shadow-sm min-w-[100px]">
+                        <span class="material-icons-round text-[28px] mb-1">schedule</span>
+                        <p id="summary-duration-2" class="font-medium text-center leading-tight"></p>
                     </div>
-                    <div class="bg-slate-50 rounded-xl p-4 border border-stone-100 flex flex-col justify-center items-center text-center group hover:border-primary/20 transition-colors">
-                        <p class="text-[11px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Total Tempat</p>
-                        <p id="summary-places" class="font-heading font-bold text-neutral-color text-sm md:text-base w-full truncate"></p>
+
+                    <!-- Card 4: Favorit -->
+                    <div class="bg-primary text-white rounded-xl p-4 flex flex-col items-center justify-center flex-1 shadow-sm min-w-[100px]">
+                        <span class="material-icons-round text-[28px] mb-1">star_outline</span>
+                        <p id="summary-favorites" class="font-medium text-center leading-tight"><span class="text-xl font-bold">4</span><br><span class="text-sm">Favorit</span></p>
+                    </div>
+
+                    <!-- Card 5: Perjalanan -->
+                    <div class="bg-white border border-primary text-primary rounded-xl p-4 flex flex-col items-center justify-center flex-1 shadow-sm min-w-[100px]">
+                        <span class="material-icons-round text-[28px] mb-1">local_shipping</span>
+                        <p id="summary-distance" class="font-medium text-center leading-tight"><span class="text-xl font-bold">28 Km</span><br><span class="text-sm">Perjalanan</span></p>
                     </div>
                 </div>
 
@@ -804,7 +827,15 @@ function renderItinerary(data) {
     document.getElementById('summary-location').textContent = data.destination || '—';
     document.getElementById('summary-budget').textContent   = data.total_budget || 'Rp 0';
     document.getElementById('summary-duration').textContent = `${data.days} Hari`;
-    document.getElementById('summary-places').textContent   = `${data.total_places || (data.schedule?.reduce((sum, day) => sum + (day.activities?.length || 0), 0)) || 0} Tempat`;
+    
+    if (document.getElementById('summary-duration-2')) {
+        document.getElementById('summary-duration-2').innerHTML = `<span class="text-xl font-bold">${data.days}</span><br><span class="text-sm">Hari</span>`;
+    }
+    
+    const placesCount = data.total_places || (data.schedule?.reduce((sum, day) => sum + (day.activities?.length || 0), 0)) || 0;
+    if (document.getElementById('summary-places')) {
+        document.getElementById('summary-places').innerHTML = `<span class="text-xl font-bold">${placesCount}</span><br><span class="text-sm">Tempat</span>`;
+    }
 
     document.getElementById('widget-weather').textContent = data.weather_summary || 'Perkiraan cuaca dasar akan muncul setelah itinerary dibuat.';
     document.getElementById('widget-detail-budget').textContent = data.budget_details || 'Estimasi lengkap tersedia di tab Budget.';
@@ -1774,7 +1805,7 @@ function appendAIMessage(html) {
     div.className = 'flex items-start gap-3';
     div.innerHTML = `
         <div class="w-8 h-8 bg-[#3c3726] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
-            <span class="material-icons-round text-white text-[16px]">smart_display</span>
+            <span class="material-icons-round text-white text-[16px]">psychology</span>
         </div>
         <div class="bg-[#3c3726] text-white shadow-sm rounded-xl px-4 py-3 max-w-[280px]">
             <p class="text-[13px] font-medium leading-relaxed">${html}</p>
@@ -1789,7 +1820,7 @@ function appendTypingIndicator() {
     div.className = 'flex items-start gap-3';
     div.innerHTML = `
         <div class="w-8 h-8 bg-[#3c3726] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
-            <span class="material-icons-round text-white text-[16px]">smart_display</span>
+            <span class="material-icons-round text-white text-[16px]">psychology</span>
         </div>
         <div class="bg-[#3c3726] shadow-sm rounded-xl px-4 py-3 flex items-center gap-2">
             <p class="text-[12px] text-stone-200 font-medium mr-1">Sedang Berpikir ....</p>
